@@ -307,6 +307,23 @@
       color: var(--text-1);
       margin-bottom: 12px;
     }
+    .multi-preview {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .multi-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      background: var(--bg-input);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+    }
+    .multi-name { color: var(--text-1); }
+    .multi-cal { color: var(--text-3); font-size: 12px; }
     .macro-row {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -820,6 +837,7 @@
 
         <div class="preview" id="previewCard">
           <div class="preview-name" id="previewName"></div>
+          <div class="multi-preview" id="multiPreview" style="display:none;"></div>
           <div class="macro-row">
             <div class="macro-cell"><div class="macro-num" id="pCal">—</div><div class="macro-label">calories</div></div>
             <div class="macro-cell"><div class="macro-num" id="pProt">—</div><div class="macro-label">protein</div></div>
@@ -833,7 +851,7 @@
           </button>
           <div class="cal-inline" id="calInline">
             <textarea id="inlineNote" rows="2" placeholder="e.g. my pasta portions are actually around 500 cal, not 700"></textarea>
-            <p class="cal-inline-hint">This will be saved and applied to all future estimates.</p>
+            <p class="cal-inline-hint">This note will be saved and the estimate will be re-run with it applied.</p>
           </div>
 
           <div class="action-row">
@@ -970,7 +988,8 @@
     const LS_CREDS = 'nutritrack_creds';
 
     let meals = [];
-    let pendingMeal = null;
+    let pendingMeals = null;
+    let pendingDescription = null;
     let goals = { cal: 2000, prot: 150, carbs: 200, fat: 65 };
     let memoryNotes = '';
     let noteInputVisible = false;
@@ -1146,11 +1165,17 @@
       const key = document.getElementById('apiKey').value.trim();
       const desc = document.getElementById('mealInput').value.trim();
       if (!desc) return;
+      await runEstimation(key, desc);
+    }
+
+    async function runEstimation(key, desc) {
       const btn = document.getElementById('estimateBtn');
       btn.disabled = true;
       document.getElementById('estimating').classList.add('show');
       document.getElementById('errorMsg').classList.remove('show');
       document.getElementById('previewCard').classList.remove('show');
+      document.getElementById('multiPreview').innerHTML = '';
+      document.getElementById('multiPreview').style.display = 'none';
       const memCtx = memoryNotes ? `\n\nPersonal calibration notes — apply these:\n${memoryNotes}\n\nAlways prioritise these over generic defaults.` : '';
       try {
         const detectData = await callClaude(key, { model: 'claude-sonnet-4-6', max_tokens: 50, system: 'The user will describe a meal. Respond with ONLY "yes" or "no" — does this mention a specific restaurant, fast food chain, brand name, or packaged food product? No explanation.', messages: [{ role: 'user', content: desc }] });
@@ -1158,30 +1183,31 @@
         document.getElementById('estimating').textContent = needsSearch ? 'Looking up nutrition data…' : 'Analysing your meal…';
         const today = fmtDate(new Date());
         const estimateBody = { model: 'claude-sonnet-4-6', max_tokens: 1024,
-          system: `You are a nutrition estimation assistant.${needsSearch ? ' The user mentioned a specific restaurant or brand — use the web search tool to look up their official nutrition data before responding.' : ''} Today's date is ${today}. Respond ONLY with a JSON object — no markdown, no preamble.\n{"meal_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"date":"YYYY-MM-DD","meal_type":"Breakfast|Lunch|Dinner|Snack","note":"one sentence on source and confidence"}\nAll numbers integers. For "date": if the user mentions a day (yesterday, last Tuesday, Monday, etc.), calculate the correct YYYY-MM-DD date relative to today (${today}). If no day is mentioned, use "${today}". For "meal_type": if the user mentions when they ate it (breakfast, lunch, dinner, snack, morning, evening, etc.), use that. Otherwise use "unspecified".${memCtx}`,
+          system: `You are a nutrition estimation assistant.${needsSearch ? ' The user mentioned a specific restaurant or brand — use the web search tool to look up their official nutrition data before responding.' : ''} Today's date is ${today}. The user may describe one or multiple food items. Return a JSON array of items — even for a single item, wrap it in an array. Respond ONLY with a JSON array — no markdown, no preamble.\n[{"meal_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"date":"YYYY-MM-DD","meal_type":"Breakfast|Lunch|Dinner|Snack","note":"one sentence on source and confidence"}]\nAll numbers integers. For "date": if the user mentions a day (yesterday, last Tuesday, Monday, etc.), calculate the correct YYYY-MM-DD date relative to today (${today}). If no day is mentioned, use "${today}". For "meal_type": if the user mentions when they ate it, use that. Otherwise use "unspecified". Each distinct food item should be its own entry in the array.${memCtx}`,
           messages: [{ role: 'user', content: `Estimate nutrition for: ${desc}` }] };
         if (needsSearch) estimateBody.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
         const data = await callClaude(key, estimateBody);
         const allText = data.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
-        const jsonMatch = allText.match(/\{[\s\S]*?"meal_name"[\s\S]*?\}/);
-        if (!jsonMatch) throw new Error('Could not parse nutrition estimate. Try rephrasing your meal.');
-        const meal = JSON.parse(jsonMatch[0].replace(/```json|```/g,'').trim());
-        const mealDate = meal.date && /^\d{4}-\d{2}-\d{2}$/.test(meal.date) ? meal.date : today;
-        const mealTypeFromClaude = meal.meal_type && meal.meal_type !== 'unspecified' ? meal.meal_type : null;
-        pendingMeal = { ...meal, type: mealTypeFromClaude || getMealType(), description: desc, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), date: mealDate, id: Date.now() };
+        // Try to parse as array first, fall back to single object
+        let items;
+        const arrayMatch = allText.match(/\[[\s\S]*?\]/);
+        if (arrayMatch) {
+          items = JSON.parse(arrayMatch[0].replace(/```json|```/g,'').trim());
+        } else {
+          const objMatch = allText.match(/\{[\s\S]*?"meal_name"[\s\S]*?\}/);
+          if (!objMatch) throw new Error('Could not parse nutrition estimate. Try rephrasing your meal.');
+          items = [JSON.parse(objMatch[0].replace(/```json|```/g,'').trim())];
+        }
+        if (!Array.isArray(items) || items.length === 0) throw new Error('Could not parse nutrition estimate.');
+        const mealTypeFromClaude = items[0].meal_type && items[0].meal_type !== 'unspecified' ? items[0].meal_type : null;
         if (mealTypeFromClaude) setMealType(mealTypeFromClaude);
-        const dateNote = mealDate !== today ? ' · logging to ' + mealDate : '';
-        document.getElementById('previewName').textContent = meal.meal_name;
-        document.getElementById('pCal').textContent = meal.calories;
-        document.getElementById('pProt').textContent = meal.protein;
-        document.getElementById('pCarbs').textContent = meal.carbs;
-        document.getElementById('pFat').textContent = meal.fat;
-        document.getElementById('previewNote').textContent = (meal.note || '') + dateNote;
-        document.getElementById('inlineNote').value = '';
-        noteInputVisible = false;
-        document.getElementById('calInline').classList.remove('show');
-        document.getElementById('calToggleLabel').textContent = 'Add a calibration note';
-        document.getElementById('previewCard').classList.add('show');
+        pendingMeals = items.map(meal => {
+          const mealDate = meal.date && /^\d{4}-\d{2}-\d{2}$/.test(meal.date) ? meal.date : today;
+          const mt = meal.meal_type && meal.meal_type !== 'unspecified' ? meal.meal_type : null;
+          return { ...meal, type: mt || getMealType(), description: desc, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), date: mealDate, id: Date.now() + Math.random() };
+        });
+        pendingDescription = desc;
+        showPreview(pendingMeals);
       } catch(e) {
         document.getElementById('errorMsg').textContent = 'Error: ' + e.message;
         document.getElementById('errorMsg').classList.add('show');
@@ -1192,33 +1218,67 @@
       }
     }
 
+    function showPreview(items) {
+      const totals = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat}),{cal:0,prot:0,carbs:0,fat:0});
+      if (items.length === 1) {
+        document.getElementById('previewName').textContent = items[0].meal_name;
+        document.getElementById('multiPreview').innerHTML = '';
+        document.getElementById('multiPreview').style.display = 'none';
+      } else {
+        document.getElementById('previewName').textContent = items.length + ' items';
+        const mp = document.getElementById('multiPreview');
+        mp.style.display = '';
+        mp.innerHTML = items.map(m => `<div class="multi-item"><span class="multi-name">${esc(m.meal_name)}</span><span class="multi-cal">${m.calories} cal</span></div>`).join('');
+      }
+      document.getElementById('pCal').textContent = totals.cal;
+      document.getElementById('pProt').textContent = totals.prot;
+      document.getElementById('pCarbs').textContent = totals.carbs;
+      document.getElementById('pFat').textContent = totals.fat;
+      const dateNote = items[0].date !== fmtDate(new Date()) ? ' · logging to ' + items[0].date : '';
+      document.getElementById('previewNote').textContent = (items[0].note || '') + dateNote;
+      document.getElementById('inlineNote').value = '';
+      noteInputVisible = false;
+      document.getElementById('calInline').classList.remove('show');
+      document.getElementById('calToggleLabel').textContent = 'Add a calibration note';
+      document.getElementById('previewCard').classList.add('show');
+    }
+
     async function confirmLog() {
-      if (!pendingMeal) return;
+      if (!pendingMeals || pendingMeals.length === 0) return;
       const noteVal = document.getElementById('inlineNote').value.trim();
       if (noteVal) {
+        // Save the note, then re-run estimation with it
         const existing = document.getElementById('memoryNotes').value.trim();
         document.getElementById('memoryNotes').value = existing ? existing + '\n- ' + noteVal : '- ' + noteVal;
         await saveCalibrations();
+        const key = document.getElementById('apiKey').value.trim();
+        if (key && pendingDescription) {
+          await runEstimation(key, pendingDescription);
+          return; // Show updated preview, user confirms again
+        }
       }
-      const m = pendingMeal;
-      if (supaReady) {
-        setSyncStatus('busy', 'saving…');
-        try {
-          const rows = await supa('meals', 'POST', { body: { date: m.date, time: m.time, meal_type: m.type, meal_name: m.meal_name, description: m.description, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat } });
-          meals.unshift({ ...m, id: rows[0].id });
-          await addToFavorites(m);
-          setSyncStatus('ok', 'synced');
-        } catch(e) { meals.unshift(m); setSyncStatus('err', 'sync error'); }
-      } else { meals.unshift(m); }
-      const loggedDate = m.date;
-      pendingMeal = null;
+      // Log all pending meals
+      for (const m of pendingMeals) {
+        if (supaReady) {
+          setSyncStatus('busy', 'saving…');
+          try {
+            const rows = await supa('meals', 'POST', { body: { date: m.date, time: m.time, meal_type: m.type, meal_name: m.meal_name, description: m.description, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat } });
+            meals.unshift({ ...m, id: rows[0].id });
+            await addToFavorites(m);
+            setSyncStatus('ok', 'synced');
+          } catch(e) { meals.unshift(m); setSyncStatus('err', 'sync error'); }
+        } else { meals.unshift(m); }
+      }
+      const loggedDate = pendingMeals[0].date;
+      pendingMeals = null;
+      pendingDescription = null;
       document.getElementById('mealInput').value = '';
       document.getElementById('previewCard').classList.remove('show');
       viewDate = new Date(loggedDate + 'T12:00:00');
       renderToday(); switchTab('today');
     }
 
-    function cancelEstimate() { document.getElementById('previewCard').classList.remove('show'); pendingMeal = null; }
+    function cancelEstimate() { document.getElementById('previewCard').classList.remove('show'); pendingMeals = null; pendingDescription = null; }
 
     async function deleteMeal(id) {
       meals = meals.filter(m => m.id !== id);
