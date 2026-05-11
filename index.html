@@ -559,6 +559,51 @@
       line-height: 1;
     }
     .del-btn:hover { color: var(--coral); background: var(--coral-light); }
+    .edit-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-3);
+      font-size: 13px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+    .edit-btn:hover { color: var(--blue); background: rgba(43,108,176,0.08); }
+    .meal-actions {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .undo-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--text-1);
+      color: var(--bg-card);
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: var(--font-body);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      transition: transform 0.25s ease;
+      z-index: 100;
+    }
+    .undo-toast.show { transform: translateX(-50%) translateY(0); }
+    .undo-toast button {
+      background: none;
+      border: none;
+      color: var(--accent-light, #68D391);
+      font-weight: 600;
+      font-size: 14px;
+      font-family: var(--font-body);
+      cursor: pointer;
+      padding: 0;
+    }
     .empty {
       text-align: center;
       padding: 32px 16px;
@@ -784,7 +829,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.03</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -984,6 +1029,11 @@
     </div>
   </div>
 
+  <div class="undo-toast" id="undoToast">
+    <span id="undoMsg">Meal deleted</span>
+    <button onclick="performUndo()">Undo</button>
+  </div>
+
   <script>
     const LS_CREDS = 'nutritrack_creds';
 
@@ -997,6 +1047,8 @@
     let favorites = [];
     let weightLog = [];
     let supaReady = false;
+    let undoStack = null;
+    let undoTimer = null;
 
     function supaUrl() { return document.getElementById('supaUrl').value.trim(); }
     function supaKey_() { return document.getElementById('supaKey').value.trim(); }
@@ -1258,16 +1310,19 @@
         }
       }
       // Log all pending meals
+      const loggedMeals = [];
       for (const m of pendingMeals) {
         if (supaReady) {
           setSyncStatus('busy', 'saving…');
           try {
             const rows = await supa('meals', 'POST', { body: { date: m.date, time: m.time, meal_type: m.type, meal_name: m.meal_name, description: m.description, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat } });
-            meals.unshift({ ...m, id: rows[0].id });
+            const logged = { ...m, id: rows[0].id };
+            meals.unshift(logged);
+            loggedMeals.push(logged);
             await addToFavorites(m);
             setSyncStatus('ok', 'synced');
-          } catch(e) { meals.unshift(m); setSyncStatus('err', 'sync error'); }
-        } else { meals.unshift(m); }
+          } catch(e) { meals.unshift(m); loggedMeals.push(m); setSyncStatus('err', 'sync error'); }
+        } else { meals.unshift(m); loggedMeals.push(m); }
       }
       const loggedDate = pendingMeals[0].date;
       pendingMeals = null;
@@ -1275,15 +1330,67 @@
       document.getElementById('mealInput').value = '';
       document.getElementById('previewCard').classList.remove('show');
       viewDate = new Date(loggedDate + 'T12:00:00');
+      showUndo(loggedMeals.length === 1 ? 'Meal logged' : loggedMeals.length + ' meals logged', { type: 'log', meals: loggedMeals });
       renderToday(); switchTab('today');
     }
 
     function cancelEstimate() { document.getElementById('previewCard').classList.remove('show'); pendingMeals = null; pendingDescription = null; }
 
     async function deleteMeal(id) {
+      const meal = meals.find(m => m.id === id);
       meals = meals.filter(m => m.id !== id);
       renderToday();
-      if (supaReady) { try { await supa('meals', 'DELETE', { query: `id=eq.${id}` }); } catch(e) {} }
+      if (meal) showUndo('Meal deleted', { type: 'delete', meal, supaDeleted: false });
+      if (supaReady) { try { await supa('meals', 'DELETE', { query: `id=eq.${id}` }); if (undoStack && undoStack.data.meal.id === id) undoStack.data.supaDeleted = true; } catch(e) {} }
+    }
+
+    function editMeal(id) {
+      const meal = meals.find(m => m.id === id);
+      if (!meal) return;
+      meals = meals.filter(m => m.id !== id);
+      renderToday();
+      document.getElementById('mealInput').value = meal.description || meal.meal_name;
+      setMealType(meal.type);
+      switchTab('log');
+      document.getElementById('mealInput').focus();
+      showUndo('Editing — old entry removed', { type: 'delete', meal, supaDeleted: false });
+      if (supaReady) { supa('meals', 'DELETE', { query: `id=eq.${id}` }).then(() => { if (undoStack && undoStack.data.meal.id === id) undoStack.data.supaDeleted = true; }).catch(() => {}); }
+    }
+
+    function showUndo(msg, data) {
+      if (undoTimer) clearTimeout(undoTimer);
+      undoStack = { data };
+      document.getElementById('undoMsg').textContent = msg;
+      document.getElementById('undoToast').classList.add('show');
+      undoTimer = setTimeout(() => {
+        document.getElementById('undoToast').classList.remove('show');
+        undoStack = null;
+      }, 5000);
+    }
+
+    async function performUndo() {
+      if (!undoStack) return;
+      const action = undoStack.data;
+      if (action.type === 'delete') {
+        const m = action.meal;
+        if (action.supaDeleted && supaReady) {
+          try {
+            const rows = await supa('meals', 'POST', { body: { date: m.date, time: m.time, meal_type: m.type, meal_name: m.meal_name, description: m.description, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat } });
+            m.id = rows[0].id;
+          } catch(e) {}
+        }
+        meals.unshift(m);
+        renderToday();
+      } else if (action.type === 'log') {
+        for (const m of action.meals) {
+          meals = meals.filter(x => x.id !== m.id);
+          if (supaReady) { try { await supa('meals', 'DELETE', { query: `id=eq.${m.id}` }); } catch(e) {} }
+        }
+        renderToday();
+      }
+      document.getElementById('undoToast').classList.remove('show');
+      if (undoTimer) clearTimeout(undoTimer);
+      undoStack = null;
     }
 
     async function saveCalibrations() {
@@ -1357,7 +1464,10 @@
       list.innerHTML = day.map(m => `<li class="meal-item">
         <div class="meal-item-left"><div class="meal-item-name">${esc(m.meal_name)}</div><div class="meal-item-meta">${esc(m.time)} · ${m.protein}g P · ${m.carbs}g C · ${m.fat}g F</div></div>
         <span class="meal-item-tag">${esc(m.type)}</span><span class="meal-item-cal">${m.calories}</span>
-        <button class="del-btn" onclick="deleteMeal(${m.id})" aria-label="Delete">✕</button>
+        <div class="meal-actions">
+          <button class="edit-btn" onclick="editMeal(${m.id})" aria-label="Edit">✎</button>
+          <button class="del-btn" onclick="deleteMeal(${m.id})" aria-label="Delete">✕</button>
+        </div>
       </li>`).join('');
     }
 
