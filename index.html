@@ -760,6 +760,149 @@
       display: none;
     }
     .suggest-result.show { display: block; animation: slideUp 0.25s ease; }
+    .suggest-card {
+      background: var(--bg-input);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+    }
+    .suggest-card-name {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-1);
+      margin-bottom: 8px;
+    }
+    .suggest-card-desc {
+      font-size: 13px;
+      color: var(--text-2);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+    .suggest-macros {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+    .suggest-macro-cell { text-align: center; }
+    .suggest-macro-val {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 16px;
+      color: var(--text-1);
+    }
+    .suggest-macro-label {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 2px;
+    }
+    .suggest-macro-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      margin-top: 4px;
+      overflow: hidden;
+    }
+    .suggest-macro-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .summary-cell {
+      text-align: center;
+      background: var(--bg-input);
+      border-radius: var(--radius-sm);
+      padding: 12px 4px;
+    }
+    .summary-num {
+      font-size: 20px;
+      font-weight: 600;
+      font-family: var(--font-display);
+      color: var(--text-1);
+    }
+    .summary-label {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 2px;
+    }
+    .streak-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .streak-pill {
+      flex: 1;
+      text-align: center;
+      background: var(--bg-input);
+      border-radius: var(--radius-sm);
+      padding: 10px 6px;
+    }
+    .streak-num {
+      font-size: 18px;
+      font-weight: 600;
+      font-family: var(--font-display);
+      color: var(--accent);
+    }
+    .streak-label {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 2px;
+    }
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 8px 0;
+    }
+    .donut-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .donut-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .donut-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .donut-legend-pct {
+      font-weight: 600;
+      color: var(--text-1);
+      margin-left: auto;
+      min-width: 36px;
+      text-align: right;
+    }
+    .deficit-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 10px;
+      background: var(--bg-input);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--text-2);
+    }
+    .deficit-val {
+      font-weight: 600;
+      font-family: var(--font-display);
+      font-size: 16px;
+    }
+    .deficit-val.surplus { color: var(--coral); }
+    .deficit-val.deficit { color: var(--accent); }
 
     /* Weight */
     .weight-input-row {
@@ -829,7 +972,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.03</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.04</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -970,6 +1113,19 @@
 
     <!-- TRENDS TAB -->
     <div class="tab-panel" id="tab-trends">
+      <div class="card">
+        <div class="card-label">Summary</div>
+        <div class="summary-grid" id="summaryGrid"></div>
+        <div class="streak-row" id="streakRow"></div>
+        <div class="deficit-row" id="deficitRow" style="display:none;"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Macro breakdown</div>
+        <div class="donut-wrap" id="donutWrap">
+          <canvas id="donutChart" width="140" height="140"></canvas>
+          <div class="donut-legend" id="donutLegend"></div>
+        </div>
+      </div>
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
           <div class="card-label" style="margin-bottom:0;">Calorie trend</div>
@@ -1546,7 +1702,113 @@
       document.getElementById('avgProt').textContent=Math.round(sum.prot/n);
       document.getElementById('avgCarbs').textContent=Math.round(sum.carbs/n);
       document.getElementById('avgFat').textContent=Math.round(sum.fat/n);
+      renderSummary(days, dwd, sum, n);
+      renderDonut(sum);
       renderWeightChart();
+    }
+
+    function renderSummary(days, dwd, sum, n) {
+      const daysTracked = dwd.length;
+      const onTarget = dwd.filter(d => d.cal <= goals.cal * 1.05).length;
+      const avgCal = Math.round(sum.cal / n);
+
+      // Streaks
+      let currentStreak = 0, longestStreak = 0, tempStreak = 0;
+      for (let i = days.length - 1; i >= 0; i--) {
+        if (days[i].cal > 0 && days[i].cal <= goals.cal * 1.05) {
+          if (i === days.length - 1 || currentStreak > 0) currentStreak++;
+          tempStreak++;
+        } else {
+          if (i >= days.length - 1 - currentStreak) currentStreak = tempStreak > 0 ? tempStreak : 0;
+          longestStreak = Math.max(longestStreak, tempStreak);
+          tempStreak = 0;
+        }
+      }
+      // recalculate properly
+      currentStreak = 0;
+      for (let i = days.length - 1; i >= 0; i--) {
+        if (days[i].cal > 0 && days[i].cal <= goals.cal * 1.05) currentStreak++;
+        else break;
+      }
+      tempStreak = 0; longestStreak = 0;
+      for (let i = 0; i < days.length; i++) {
+        if (days[i].cal > 0 && days[i].cal <= goals.cal * 1.05) { tempStreak++; longestStreak = Math.max(longestStreak, tempStreak); }
+        else tempStreak = 0;
+      }
+
+      document.getElementById('summaryGrid').innerHTML = `
+        <div class="summary-cell"><div class="summary-num">${daysTracked}</div><div class="summary-label">days tracked</div></div>
+        <div class="summary-cell"><div class="summary-num">${onTarget}</div><div class="summary-label">on target</div></div>
+        <div class="summary-cell"><div class="summary-num">${avgCal}</div><div class="summary-label">avg cal/day</div></div>
+      `;
+
+      document.getElementById('streakRow').innerHTML = `
+        <div class="streak-pill"><div class="streak-num">${currentStreak}</div><div class="streak-label">current streak</div></div>
+        <div class="streak-pill"><div class="streak-num">${longestStreak}</div><div class="streak-label">longest streak</div></div>
+      `;
+
+      // Deficit/surplus based on weight trend
+      const defRow = document.getElementById('deficitRow');
+      if (weightLog.length >= 2) {
+        const recent = weightLog.slice(-Math.min(weightLog.length, trendRange));
+        if (recent.length >= 2) {
+          const first = recent[0], last = recent[recent.length - 1];
+          const daysBetween = (new Date(last.date) - new Date(first.date)) / (1000*60*60*24);
+          if (daysBetween > 0) {
+            const lbsPerWeek = ((last.value - first.value) / daysBetween) * 7;
+            const calPerWeek = Math.round(lbsPerWeek * 3500);
+            const isDeficit = calPerWeek < 0;
+            defRow.style.display = '';
+            defRow.innerHTML = `<span>Estimated weekly</span> <span class="deficit-val ${isDeficit ? 'deficit' : 'surplus'}">${isDeficit ? '' : '+'}${calPerWeek} cal</span> <span>${isDeficit ? 'deficit' : 'surplus'}</span>`;
+          } else { defRow.style.display = 'none'; }
+        } else { defRow.style.display = 'none'; }
+      } else { defRow.style.display = 'none'; }
+    }
+
+    function renderDonut(sum) {
+      const canvas = document.getElementById('donutChart');
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const size = 140;
+      canvas.width = size * dpr; canvas.height = size * dpr;
+      canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+      ctx.scale(dpr, dpr); ctx.clearRect(0, 0, size, size);
+
+      const protCal = sum.prot * 4, carbCal = sum.carbs * 4, fatCal = sum.fat * 9;
+      const total = protCal + carbCal + fatCal;
+      if (total === 0) {
+        document.getElementById('donutLegend').innerHTML = '<span style="font-size:13px;color:var(--text-3);">No data yet</span>';
+        return;
+      }
+      const pcts = [protCal/total, carbCal/total, fatCal/total];
+      const cs = getComputedStyle(document.documentElement);
+      const colors = [cs.getPropertyValue('--accent').trim()||'#2E6B3E', cs.getPropertyValue('--amber').trim()||'#B7791F', cs.getPropertyValue('--coral').trim()||'#C53D2F'];
+      const labels = ['Protein', 'Carbs', 'Fat'];
+      const cx = size/2, cy = size/2, outerR = 62, innerR = 40;
+      let startAngle = -Math.PI / 2;
+      pcts.forEach((pct, i) => {
+        const sweep = pct * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, outerR, startAngle, startAngle + sweep);
+        ctx.arc(cx, cy, innerR, startAngle + sweep, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = colors[i];
+        ctx.fill();
+        startAngle += sweep;
+      });
+      // Center text
+      const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+      ctx.fillStyle = isDark ? '#E8E6E1' : '#1A1A1A';
+      ctx.font = '600 18px DM Sans, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(Math.round(total), cx, cy - 6);
+      ctx.fillStyle = '#9C9B96';
+      ctx.font = '11px DM Sans, sans-serif';
+      ctx.fillText('cal', cx, cy + 10);
+
+      document.getElementById('donutLegend').innerHTML = labels.map((l, i) =>
+        `<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${colors[i]}"></span>${l}<span class="donut-legend-pct">${Math.round(pcts[i]*100)}%</span></div>`
+      ).join('');
     }
 
     async function addToFavorites(meal) {
@@ -1636,8 +1898,29 @@
       const rem={cal:Math.max(0,goals.cal-t.cal),prot:Math.max(0,goals.prot-t.prot),carbs:Math.max(0,goals.carbs-t.carbs),fat:Math.max(0,goals.fat-t.fat)};
       const memCtx=memoryNotes?`\nUser's food preferences:\n${memoryNotes}`:'';
       try {
-        const data=await callClaude(key,{model:'claude-sonnet-4-6',max_tokens:500,system:`You are a helpful nutrition assistant. Suggest a specific, practical meal. Be concrete — name actual dishes. Keep it to 2-3 sentences. Consider remaining macros and preferences.${memCtx}`,messages:[{role:'user',content:`I've eaten ${t.cal} cal today (${t.prot}g P, ${t.carbs}g C, ${t.fat}g F). Remaining: ~${rem.cal} cal, ${rem.prot}g P, ${rem.carbs}g C, ${rem.fat}g F. What should I eat?`}]});
-        result.innerText=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+        const data=await callClaude(key,{model:'claude-sonnet-4-6',max_tokens:500,
+          system:`You are a helpful nutrition assistant. Suggest a specific, practical meal. Be concrete — name actual dishes. Respond ONLY with a JSON object, no markdown:\n{"meal_name":"short name","description":"1-2 sentence description","calories":number,"protein":number,"carbs":number,"fat":number}\nAll numbers integers.${memCtx}`,
+          messages:[{role:'user',content:`I've eaten ${t.cal} cal today (${t.prot}g P, ${t.carbs}g C, ${t.fat}g F). Remaining: ~${rem.cal} cal, ${rem.prot}g P, ${rem.carbs}g C, ${rem.fat}g F. What should I eat?`}]});
+        const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+        const jsonMatch=text.match(/\{[\s\S]*?"meal_name"[\s\S]*?\}/);
+        if (jsonMatch) {
+          const s=JSON.parse(jsonMatch[0].replace(/```json|```/g,'').trim());
+          const macros=[
+            {label:'cal',val:s.calories,goal:rem.cal,color:'var(--blue)'},
+            {label:'protein',val:s.protein,goal:rem.prot,color:'var(--accent)'},
+            {label:'carbs',val:s.carbs,goal:rem.carbs,color:'var(--amber)'},
+            {label:'fat',val:s.fat,goal:rem.fat,color:'var(--coral)'}
+          ];
+          result.innerHTML=`<div class="suggest-card">
+            <div class="suggest-card-name">${esc(s.meal_name)}</div>
+            <div class="suggest-card-desc">${esc(s.description)}</div>
+            <div class="suggest-macros">${macros.map(m=>{
+              const pct=m.goal>0?Math.min(Math.round((m.val/m.goal)*100),100):100;
+              return `<div class="suggest-macro-cell"><div class="suggest-macro-val">${m.val}</div><div class="suggest-macro-label">${m.label}</div><div class="suggest-macro-bar"><div class="suggest-macro-fill" style="width:${pct}%;background:${m.color}"></div></div></div>`;
+            }).join('')}</div></div>`;
+        } else {
+          result.innerText=text;
+        }
         result.classList.add('show');
       } catch(e) { result.innerText='Error: '+e.message; result.classList.add('show'); }
       finally { document.getElementById('suggestLoading').classList.remove('show'); btn.disabled=false; }
