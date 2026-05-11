@@ -36,7 +36,7 @@
     }
 
     @media (prefers-color-scheme: dark) {
-      :root {
+      :root:not(.light-mode) {
         --bg: #141413;
         --bg-card: #1E1E1C;
         --bg-input: #282825;
@@ -58,6 +58,28 @@
         --teal: #52C4B2;
         --teal-light: #122A27;
       }
+    }
+    :root.dark-mode {
+      --bg: #141413;
+      --bg-card: #1E1E1C;
+      --bg-input: #282825;
+      --bg-hover: #32322F;
+      --text-1: #EAEAE6;
+      --text-2: #9C9B96;
+      --text-3: #6B6A65;
+      --border: rgba(255,255,255,0.08);
+      --border-focus: rgba(255,255,255,0.2);
+      --accent: #5CB176;
+      --accent-light: #1C2E22;
+      --accent-text: #A8DCAD;
+      --blue: #63A4E8;
+      --blue-light: #1A2840;
+      --amber: #E8A93E;
+      --amber-light: #2E2410;
+      --coral: #E86B5E;
+      --coral-light: #2E1614;
+      --teal: #52C4B2;
+      --teal-light: #122A27;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1004,6 +1026,99 @@
     }
     .weight-text-field:focus { border-color: var(--border-focus); }
 
+    /* Theme toggle */
+    .theme-toggle {
+      display: flex;
+      gap: 4px;
+      background: var(--bg-input);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+    }
+    .theme-opt {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-family: var(--font-body);
+      font-weight: 500;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-3);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .theme-opt.active {
+      background: var(--bg-card);
+      color: var(--text-1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Exercise */
+    .exercise-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .exercise-text-field {
+      flex: 1;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-family: var(--font-body);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-input);
+      color: var(--text-1);
+      outline: none;
+    }
+    .exercise-text-field:focus { border-color: var(--border-focus); }
+    .exercise-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .exercise-item:last-child { border-bottom: none; }
+    .exercise-name { color: var(--text-1); flex: 1; }
+    .exercise-cal { color: #22C55E; font-weight: 600; margin: 0 10px; white-space: nowrap; }
+
+    /* Recipes */
+    .recipe-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .recipe-item:last-child { border-bottom: none; }
+    .recipe-item-left { flex: 1; min-width: 0; }
+    .recipe-item-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-1);
+    }
+    .recipe-item-macros {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 2px;
+    }
+    .recipe-item-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .recipe-use {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent);
+      background: var(--accent-light);
+      border: none;
+      border-radius: 4px;
+      padding: 4px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
     .range-toggle {
       display: flex;
       gap: 2px;
@@ -1053,7 +1168,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.06</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.07</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1084,8 +1199,8 @@
       <button class="tab-btn active" onclick="switchTab('log')">Log</button>
       <button class="tab-btn" onclick="switchTab('today')">Today</button>
       <button class="tab-btn" onclick="switchTab('trends')">Trends</button>
-      <button class="tab-btn" onclick="switchTab('cals')">Calibrations</button>
-      <button class="tab-btn" onclick="switchTab('goals')">Goals</button>
+      <button class="tab-btn" onclick="switchTab('recipes')">Recipes</button>
+      <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
     </div>
 
     <!-- LOG TAB -->
@@ -1142,6 +1257,14 @@
         </div>
         <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Enter a number for today, or include a date like "yesterday 173".</p>
       </div>
+      <div class="card">
+        <div class="card-label">Log exercise</div>
+        <div class="exercise-input-row">
+          <input type="text" class="exercise-text-field" id="exerciseInput" placeholder="e.g. 30 min run, or 'yoga 200 cal'" />
+          <button class="save-btn" onclick="logExercise()">Log</button>
+        </div>
+        <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Describe your exercise — Claude will estimate calories burned.</p>
+      </div>
     </div>
 
     <!-- TODAY TAB -->
@@ -1158,8 +1281,11 @@
           <div class="total-cell"><div class="total-num" id="totCarbs">0</div><div class="total-label">carbs</div></div>
           <div class="total-cell"><div class="total-num" id="totFat">0</div><div class="total-label">fat</div></div>
         </div>
-        <div id="todayWeightRow" style="display:none;text-align:center;padding:6px 0 8px;font-size:14px;color:var(--text-2);">
+        <div id="todayWeightRow" style="display:none;text-align:center;padding:6px 0 4px;font-size:14px;color:var(--text-2);">
           <span style="font-weight:600;color:var(--text-1);font-family:var(--font-display);" id="todayWeight">—</span> <span>lbs today</span>
+        </div>
+        <div id="todayExerciseRow" style="display:none;text-align:center;padding:4px 0 8px;font-size:14px;color:var(--text-2);">
+          <span style="font-weight:600;color:#22C55E;font-family:var(--font-display);" id="todayExCal">0</span> <span>cal burned</span>
         </div>
         <div id="progressBars"></div>
       </div>
@@ -1176,11 +1302,40 @@
       </div>
     </div>
 
-    <!-- CALIBRATIONS TAB -->
-    <div class="tab-panel" id="tab-cals">
+    <!-- RECIPES TAB -->
+    <div class="tab-panel" id="tab-recipes">
+      <div class="card">
+        <div class="card-label">Add a recipe</div>
+        <textarea class="meal-textarea" id="recipeInput" placeholder="e.g. My chicken stir fry: 8oz chicken breast, 1 cup rice, mixed vegetables with soy sauce and sesame oil"></textarea>
+        <div class="estimate-row">
+          <button class="estimate-btn" id="recipeEstBtn" onclick="estimateRecipe()" disabled>Save recipe</button>
+        </div>
+        <p class="status-line" id="recipeEstimating">Analysing recipe…</p>
+        <p class="error-line" id="recipeError"></p>
+      </div>
+      <div class="card" id="recipeListCard" style="display:none;">
+        <div class="card-label">My recipes</div>
+        <div id="recipeList"></div>
+      </div>
+      <div class="card">
+        <div class="card-label">How recipes work</div>
+        <p class="info-text">Recipes are saved with fixed nutrition values. When you log a meal that matches a recipe name, those values are used instead of a new estimate — unless you specifically say otherwise.</p>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB (merged calibrations + goals + theme + data) -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="card">
+        <div class="card-label">Appearance</div>
+        <div class="theme-toggle" id="themeToggle">
+          <button class="theme-opt" onclick="setTheme('system')" data-theme="system">System</button>
+          <button class="theme-opt" onclick="setTheme('light')" data-theme="light">Light</button>
+          <button class="theme-opt" onclick="setTheme('dark')" data-theme="dark">Dark</button>
+        </div>
+      </div>
       <div class="card">
         <div class="card-label">My calibrations</div>
-        <p class="info-text" style="margin-bottom:12px;">Anything here is sent to Claude with every estimate. Describe your portion sizes, cooking habits, or corrections to past estimates.</p>
+        <p class="info-text" style="margin-bottom:12px;">Anything here is sent to Claude with every estimate. Describe your portion sizes, cooking habits, or corrections.</p>
         <textarea class="cal-textarea" id="memoryNotes" placeholder="- My pasta portions are around 500 cal, not 700&#10;- I always use a lot of olive oil, add ~50 cal&#10;- When I say 'big' I mean restaurant-sized&#10;- I drink semi-skimmed milk"></textarea>
         <div class="save-row">
           <button class="save-btn" onclick="saveCalibrations()">Save calibrations</button>
@@ -1188,12 +1343,23 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-label">How this works</div>
-        <p class="info-text">Your calibrations are stored in your browser and loaded every time you open this page. Claude receives them as context before seeing your meal description, so estimates improve over time without any extra effort from you.</p>
+        <div class="card-label">Daily goals</div>
+        <div class="goals-grid">
+          <div class="goal-cell"><span class="goal-label">Calories</span><input class="goal-input" type="number" id="goalCal" value="2000" onchange="saveGoals()" /></div>
+          <div class="goal-cell"><span class="goal-label">Protein (g)</span><input class="goal-input" type="number" id="goalProt" value="150" onchange="saveGoals()" /></div>
+          <div class="goal-cell"><span class="goal-label">Carbs (g)</span><input class="goal-input" type="number" id="goalCarbs" value="200" onchange="saveGoals()" /></div>
+          <div class="goal-cell"><span class="goal-label">Fat (g)</span><input class="goal-input" type="number" id="goalFat" value="65" onchange="saveGoals()" /></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">Data</div>
+        <p class="info-text" style="margin-bottom:12px;">Download all your logged meals as a CSV, or clear all data to start fresh.</p>
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+          <button class="export-btn" onclick="exportCSV()">↓ Download CSV</button>
+          <button class="reset-btn" onclick="resetAll()">Reset all data</button>
+        </div>
       </div>
     </div>
-
-    <!-- TRENDS TAB -->
     <div class="tab-panel" id="tab-trends">
       <div class="card">
         <div class="card-label">Summary</div>
@@ -1244,27 +1410,6 @@
       </div>
     </div>
 
-    <!-- GOALS TAB -->
-    <div class="tab-panel" id="tab-goals">
-      <div class="card">
-        <div class="card-label">Daily goals</div>
-        <div class="goals-grid">
-          <div class="goal-cell"><span class="goal-label">Calories</span><input class="goal-input" type="number" id="goalCal" value="2000" onchange="saveGoals()" /></div>
-          <div class="goal-cell"><span class="goal-label">Protein (g)</span><input class="goal-input" type="number" id="goalProt" value="150" onchange="saveGoals()" /></div>
-          <div class="goal-cell"><span class="goal-label">Carbs (g)</span><input class="goal-input" type="number" id="goalCarbs" value="200" onchange="saveGoals()" /></div>
-          <div class="goal-cell"><span class="goal-label">Fat (g)</span><input class="goal-input" type="number" id="goalFat" value="65" onchange="saveGoals()" /></div>
-        </div>
-        <p class="info-text" style="margin-top:12px;">Progress bars on the Today tab update automatically.</p>
-      </div>
-      <div class="card">
-        <div class="card-label">Data</div>
-        <p class="info-text" style="margin-bottom:12px;">Download all your logged meals as a CSV, or clear all data to start fresh.</p>
-        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-          <button class="export-btn" onclick="exportCSV()">↓ Download CSV</button>
-          <button class="reset-btn" onclick="resetAll()">Reset all data</button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <div class="undo-toast" id="undoToast">
@@ -1284,6 +1429,8 @@
     let viewDate = new Date();
     let favorites = [];
     let weightLog = [];
+    let exerciseLog = [];
+    let recipes = [];
     let supaReady = false;
     let undoStack = null;
     let undoTimer = null;
@@ -1355,6 +1502,7 @@
     }
 
     async function init() {
+      loadTheme();
       try {
         const c = JSON.parse(localStorage.getItem(LS_CREDS) || '{}');
         if (c.apiKey) document.getElementById('apiKey').value = c.apiKey;
@@ -1399,6 +1547,10 @@
         favorites = favRows.map(r => ({ id: r.id, meal_name: r.meal_name, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, type: r.meal_type, description: r.description }));
         const weightRows = await supa('weight_log', 'GET', { query: 'select=*&order=date.asc' });
         weightLog = weightRows.map(r => ({ id: r.id, date: r.date, value: r.value }));
+        const exRows = await supa('exercise', 'GET', { query: 'select=*&order=date.desc' });
+        exerciseLog = exRows.map(r => ({ id: r.id, date: r.date, description: r.description, calories_burned: r.calories_burned }));
+        const recRows = await supa('recipes', 'GET', { query: 'select=*&order=created_at.desc' });
+        recipes = recRows.map(r => ({ id: r.id, recipe_name: r.recipe_name, description: r.description, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat }));
         supaReady = true;
         setSyncStatus('ok', 'synced');
         renderToday();
@@ -1450,6 +1602,7 @@
       const supaOk = su.startsWith('https://') && sk.length > 20;
       document.getElementById('estimateBtn').disabled = !apiOk;
       document.getElementById('suggestBtn').disabled = !apiOk;
+      document.getElementById('recipeEstBtn').disabled = !apiOk;
       document.getElementById('syncDot').classList.toggle('ok', apiOk && supaOk && supaReady);
       document.getElementById('settingsBtn').classList.toggle('has-key', apiOk && supaOk);
       saveCreds();
@@ -1465,12 +1618,13 @@
     }
 
     function switchTab(name) {
-      const names = ['log','today','trends','cals','goals'];
+      const names = ['log','today','trends','recipes','settings'];
       document.querySelectorAll('.tab-btn').forEach((t,i) => t.classList.toggle('active', names[i]===name));
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id==='tab-'+name));
       if (name === 'today') renderToday();
       if (name === 'trends') renderTrends();
       if (name === 'log') renderFavorites();
+      if (name === 'recipes') renderRecipes();
     }
 
     function toggleInlineNote() {
@@ -1518,13 +1672,14 @@
       document.getElementById('multiPreview').innerHTML = '';
       document.getElementById('multiPreview').style.display = 'none';
       const memCtx = memoryNotes ? `\n\nPersonal calibration notes — apply these:\n${memoryNotes}\n\nAlways prioritise these over generic defaults.` : '';
+      const recipeCtx = recipes.length > 0 ? `\n\nUser's saved recipes — if the meal matches one of these, use these exact values:\n${recipes.map(r => `- ${r.recipe_name}: ${r.calories} cal, ${r.protein}g P, ${r.carbs}g C, ${r.fat}g F`).join('\n')}` : '';
       try {
         const detectData = await callClaude(key, { model: 'claude-sonnet-4-6', max_tokens: 50, system: 'The user will describe a meal. Respond with ONLY "yes" or "no" — does this mention a specific restaurant, fast food chain, brand name, or packaged food product? No explanation.', messages: [{ role: 'user', content: desc }] });
         const needsSearch = detectData.content[0].text.trim().toLowerCase().startsWith('yes');
         document.getElementById('estimating').textContent = needsSearch ? 'Looking up nutrition data…' : 'Analysing your meal…';
         const today = fmtDate(new Date());
         const estimateBody = { model: 'claude-sonnet-4-6', max_tokens: 1024,
-          system: `You are a nutrition estimation assistant.${needsSearch ? ' The user mentioned a specific restaurant or brand — use the web search tool to look up their official nutrition data before responding.' : ''} Today's date is ${today}. The user may describe one or multiple food items. Return a JSON array of items — even for a single item, wrap it in an array. Respond ONLY with a JSON array — no markdown, no preamble.\n[{"meal_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"date":"YYYY-MM-DD","meal_type":"Breakfast|Lunch|Dinner|Snack","note":"one sentence on source and confidence"}]\nAll numbers integers. For "date": if the user mentions a day (yesterday, last Tuesday, Monday, etc.), calculate the correct YYYY-MM-DD date relative to today (${today}). If no day is mentioned, use "${today}". For "meal_type": if the user mentions when they ate it, use that. Otherwise use "unspecified". Each distinct food item should be its own entry in the array.${memCtx}`,
+          system: `You are a nutrition estimation assistant.${needsSearch ? ' The user mentioned a specific restaurant or brand — use the web search tool to look up their official nutrition data before responding.' : ''} Today's date is ${today}. The user may describe one or multiple food items. Return a JSON array of items — even for a single item, wrap it in an array. Respond ONLY with a JSON array — no markdown, no preamble.\n[{"meal_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"date":"YYYY-MM-DD","meal_type":"Breakfast|Lunch|Dinner|Snack","note":"one sentence on source and confidence"}]\nAll numbers integers. For "date": if the user mentions a day (yesterday, last Tuesday, Monday, etc.), calculate the correct YYYY-MM-DD date relative to today (${today}). If no day is mentioned, use "${today}". For "meal_type": if the user mentions when they ate it, use that. Otherwise use "unspecified". Each distinct food item should be its own entry in the array.${recipeCtx}${memCtx}`,
           messages: [{ role: 'user', content: `Estimate nutrition for: ${desc}` }] };
         if (needsSearch) estimateBody.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
         const data = await callClaude(key, estimateBody);
@@ -1714,10 +1869,12 @@
           await supa('meals', 'DELETE', { query: 'id=gt.0' });
           await supa('favorites', 'DELETE', { query: 'id=gt.0' });
           await supa('weight_log', 'DELETE', { query: 'id=gt.0' });
+          await supa('exercise', 'DELETE', { query: 'id=gt.0' });
+          await supa('recipes', 'DELETE', { query: 'id=gt.0' });
           await supa('settings', 'PATCH', { query: 'id=eq.1', body: { calibrations: '', goal_cal: 2000, goal_prot: 150, goal_carbs: 200, goal_fat: 65 } });
         } catch(e) { console.error(e); }
       }
-      meals = []; favorites = []; weightLog = []; memoryNotes = '';
+      meals = []; favorites = []; weightLog = []; exerciseLog = []; recipes = []; memoryNotes = '';
       goals = { cal: 2000, prot: 150, carbs: 200, fat: 65 };
       document.getElementById('memoryNotes').value = '';
       document.getElementById('goalCal').value = 2000; document.getElementById('goalProt').value = 150;
@@ -1729,8 +1886,11 @@
       document.getElementById('dateLabel').textContent = dateLabelFn(viewDate);
       const ds = fmtDate(viewDate);
       const day = meals.filter(m => m.date === ds);
+      const dayEx = exerciseLog.filter(e => e.date === ds);
+      const exCal = dayEx.reduce((a,e) => a + e.calories_burned, 0);
       const t = day.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat}),{cal:0,prot:0,carbs:0,fat:0});
-      document.getElementById('totCal').textContent = t.cal;
+      const netCal = t.cal - exCal;
+      document.getElementById('totCal').textContent = netCal;
       document.getElementById('totProt').textContent = t.prot;
       document.getElementById('totCarbs').textContent = t.carbs;
       document.getElementById('totFat').textContent = t.fat;
@@ -1738,8 +1898,12 @@
       const wRow = document.getElementById('todayWeightRow');
       if (wEntry) { document.getElementById('todayWeight').textContent = wEntry.value; wRow.style.display = ''; }
       else { wRow.style.display = 'none'; }
+      // Show exercise burned row
+      const exRow = document.getElementById('todayExerciseRow');
+      if (exCal > 0) { document.getElementById('todayExCal').textContent = exCal; exRow.style.display = ''; }
+      else { exRow.style.display = 'none'; }
       const bars = [
-        {label:'Calories',val:t.cal,goal:goals.cal,color:'#22C55E'},
+        {label:'Calories (net)',val:Math.max(0,netCal),goal:goals.cal,color:'#22C55E'},
         {label:'Protein',val:t.prot,goal:goals.prot,color:'#3B82F6'},
         {label:'Carbs',val:t.carbs,goal:goals.carbs,color:'#F59E0B'},
         {label:'Fat',val:t.fat,goal:goals.fat,color:'#EF4444'}
@@ -1873,7 +2037,7 @@
       const allVals = datasets.flatMap(d=>d.data);
       if (goalLine) allVals.push(goalLine);
       const maxVal = Math.max(...allVals,1)*1.15;
-      const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+      const isDark = document.documentElement.classList.contains('dark-mode') || (!document.documentElement.classList.contains('light-mode') && window.matchMedia('(prefers-color-scheme:dark)').matches);
       const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
       const textColor = '#9C9B96';
       ctx.font = '11px DM Sans,sans-serif'; ctx.textAlign='right'; ctx.fillStyle=textColor;
@@ -2014,7 +2178,7 @@
         startAngle += sweep;
       });
       const avgCal = Math.round(total / n);
-      const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+      const isDark = document.documentElement.classList.contains('dark-mode') || (!document.documentElement.classList.contains('light-mode') && window.matchMedia('(prefers-color-scheme:dark)').matches);
       ctx.fillStyle = isDark ? '#E8E6E1' : '#1A1A1A';
       ctx.font = '600 18px DM Sans, sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -2141,6 +2305,143 @@
         result.classList.add('show');
       } catch(e) { result.innerText='Error: '+e.message; result.classList.add('show'); }
       finally { document.getElementById('suggestLoading').classList.remove('show'); btn.disabled=false; }
+    }
+
+    // === EXERCISE ===
+    async function logExercise() {
+      const input = document.getElementById('exerciseInput').value.trim();
+      if (!input) return;
+      const key = document.getElementById('apiKey').value.trim();
+      if (!key) return;
+      try {
+        const today = fmtDate(new Date());
+        const data = await callClaude(key, {
+          model: 'claude-sonnet-4-6', max_tokens: 100,
+          system: `Extract exercise info. Today is ${today}. Respond ONLY with JSON: {"description":"short name","calories_burned":number,"date":"YYYY-MM-DD"}. Estimate calories burned based on typical values. If no date mentioned, use "${today}".`,
+          messages: [{ role: 'user', content: input }]
+        });
+        const text = data.content[0].text.trim().replace(/```json|```/g,'');
+        const parsed = JSON.parse(text);
+        if (parsed.calories_burned && parsed.date) {
+          const entry = { date: parsed.date, description: parsed.description || input, calories_burned: parsed.calories_burned };
+          if (supaReady) {
+            setSyncStatus('busy','saving…');
+            try {
+              const rows = await supa('exercise','POST',{body:entry});
+              entry.id = rows[0].id;
+              setSyncStatus('ok','synced');
+            } catch(e) { entry.id = Date.now(); setSyncStatus('err','sync error'); }
+          } else { entry.id = Date.now(); }
+          exerciseLog.unshift(entry);
+          document.getElementById('exerciseInput').value = '';
+          renderToday();
+        }
+      } catch(e) {
+        const numMatch = input.match(/(\d+)/);
+        if (numMatch) {
+          const entry = { date: fmtDate(new Date()), description: input, calories_burned: parseInt(numMatch[1]) };
+          if (supaReady) {
+            try { const rows = await supa('exercise','POST',{body:entry}); entry.id=rows[0].id; } catch(e) { entry.id=Date.now(); }
+          } else { entry.id = Date.now(); }
+          exerciseLog.unshift(entry);
+          document.getElementById('exerciseInput').value = '';
+          renderToday();
+        }
+      }
+    }
+
+    // === RECIPES ===
+    async function estimateRecipe() {
+      const key = document.getElementById('apiKey').value.trim();
+      const desc = document.getElementById('recipeInput').value.trim();
+      if (!desc || !key) return;
+      const btn = document.getElementById('recipeEstBtn');
+      btn.disabled = true;
+      document.getElementById('recipeEstimating').classList.add('show');
+      document.getElementById('recipeError').classList.remove('show');
+      try {
+        const data = await callClaude(key, {
+          model: 'claude-sonnet-4-6', max_tokens: 300,
+          system: `You are a nutrition assistant. The user describes a recipe. Estimate total nutrition for one serving. Respond ONLY with JSON:\n{"recipe_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number}\nAll numbers integers. No markdown.`,
+          messages: [{ role: 'user', content: desc }]
+        });
+        const text = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+        const match = text.match(/\{[\s\S]*?"recipe_name"[\s\S]*?\}/);
+        if (!match) throw new Error('Could not parse recipe. Try rephrasing.');
+        const r = JSON.parse(match[0].replace(/```json|```/g,'').trim());
+        const recipe = { recipe_name: r.recipe_name, description: desc, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat };
+        if (supaReady) {
+          setSyncStatus('busy','saving…');
+          try {
+            const rows = await supa('recipes','POST',{body:recipe});
+            recipe.id = rows[0].id;
+            setSyncStatus('ok','synced');
+          } catch(e) { recipe.id = Date.now(); setSyncStatus('err','sync error'); }
+        } else { recipe.id = Date.now(); }
+        recipes.unshift(recipe);
+        document.getElementById('recipeInput').value = '';
+        renderRecipes();
+      } catch(e) {
+        document.getElementById('recipeError').textContent = 'Error: ' + e.message;
+        document.getElementById('recipeError').classList.add('show');
+      } finally {
+        document.getElementById('recipeEstimating').classList.remove('show');
+        btn.disabled = false;
+      }
+    }
+
+    function renderRecipes() {
+      const card = document.getElementById('recipeListCard');
+      const list = document.getElementById('recipeList');
+      if (recipes.length === 0) { card.style.display = 'none'; return; }
+      card.style.display = '';
+      list.innerHTML = recipes.map(r => `<div class="recipe-item">
+        <div class="recipe-item-left">
+          <div class="recipe-item-name">${esc(r.recipe_name)}</div>
+          <div class="recipe-item-macros">${r.calories} cal · ${r.protein}g P · ${r.carbs}g C · ${r.fat}g F</div>
+        </div>
+        <div class="recipe-item-actions">
+          <button class="recipe-use" onclick="logRecipe(${r.id})">Log</button>
+          <button class="fav-remove" onclick="deleteRecipe(${r.id})" aria-label="Remove">✕</button>
+        </div>
+      </div>`).join('');
+    }
+
+    async function logRecipe(id) {
+      const r = recipes.find(x => x.id === id);
+      if (!r) return;
+      const now = new Date();
+      const mealData = { date: fmtDate(now), time: now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), type: getMealType(), meal_name: r.recipe_name, description: r.description, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat };
+      if (supaReady) {
+        setSyncStatus('busy','saving…');
+        try {
+          const rows = await supa('meals','POST',{body:{date:mealData.date,time:mealData.time,meal_type:mealData.type,meal_name:mealData.meal_name,description:mealData.description,calories:mealData.calories,protein:mealData.protein,carbs:mealData.carbs,fat:mealData.fat}});
+          mealData.id = rows[0].id;
+          setSyncStatus('ok','synced');
+        } catch(e) { mealData.id = Date.now(); setSyncStatus('err','sync error'); }
+      } else { mealData.id = Date.now(); }
+      meals.unshift(mealData);
+      viewDate = new Date();
+      renderToday(); switchTab('today');
+    }
+
+    async function deleteRecipe(id) {
+      recipes = recipes.filter(r => r.id !== id);
+      renderRecipes();
+      if (supaReady) { try { await supa('recipes','DELETE',{query:`id=eq.${id}`}); } catch(e) {} }
+    }
+
+    // === THEME ===
+    function setTheme(mode) {
+      document.querySelectorAll('.theme-opt').forEach(b => b.classList.toggle('active', b.dataset.theme === mode));
+      document.documentElement.classList.remove('dark-mode','light-mode');
+      if (mode === 'dark') document.documentElement.classList.add('dark-mode');
+      else if (mode === 'light') document.documentElement.classList.add('light-mode');
+      try { localStorage.setItem('nutritrack_theme', mode); } catch(e) {}
+    }
+    function loadTheme() {
+      const saved = localStorage.getItem('nutritrack_theme') || 'system';
+      setTheme(saved);
     }
 
     init();
