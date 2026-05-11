@@ -972,7 +972,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.04</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.04.1</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1147,7 +1147,7 @@
         <canvas id="macroChart" height="200"></canvas>
       </div>
       <div class="card">
-        <div class="card-label">Daily averages</div>
+        <div class="card-label" id="avgLabel">Daily averages (7d)</div>
         <div class="totals-row" id="avgRow">
           <div class="total-cell"><div class="total-num" id="avgCal">—</div><div class="total-label">avg cal</div></div>
           <div class="total-cell"><div class="total-num" id="avgProt">—</div><div class="total-label">avg protein</div></div>
@@ -1651,7 +1651,7 @@
       canvas.width = w*dpr; canvas.height = h*dpr;
       canvas.style.width = w+'px'; canvas.style.height = h+'px';
       ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
-      const padL=44, padR=16, padT=16, padB=32;
+      const padL=44, padR=36, padT=16, padB=32;
       const chartW=w-padL-padR, chartH=h-padT-padB;
       const allVals = datasets.flatMap(d=>d.data);
       if (goalLine) allVals.push(goalLine);
@@ -1702,8 +1702,9 @@
       document.getElementById('avgProt').textContent=Math.round(sum.prot/n);
       document.getElementById('avgCarbs').textContent=Math.round(sum.carbs/n);
       document.getElementById('avgFat').textContent=Math.round(sum.fat/n);
+      document.getElementById('avgLabel').textContent='Daily averages ('+trendRange+'d)';
       renderSummary(days, dwd, sum, n);
-      renderDonut(sum);
+      renderDonut(sum, n);
       renderWeightChart();
     }
 
@@ -1765,7 +1766,7 @@
       } else { defRow.style.display = 'none'; }
     }
 
-    function renderDonut(sum) {
+    function renderDonut(sum, n) {
       const canvas = document.getElementById('donutChart');
       const ctx = canvas.getContext('2d');
       const dpr = window.devicePixelRatio || 1;
@@ -1781,8 +1782,7 @@
         return;
       }
       const pcts = [protCal/total, carbCal/total, fatCal/total];
-      const cs = getComputedStyle(document.documentElement);
-      const colors = [cs.getPropertyValue('--accent').trim()||'#2E6B3E', cs.getPropertyValue('--amber').trim()||'#B7791F', cs.getPropertyValue('--coral').trim()||'#C53D2F'];
+      const colors = ['#3B82F6', '#F59E0B', '#EF4444'];
       const labels = ['Protein', 'Carbs', 'Fat'];
       const cx = size/2, cy = size/2, outerR = 62, innerR = 40;
       let startAngle = -Math.PI / 2;
@@ -1796,15 +1796,15 @@
         ctx.fill();
         startAngle += sweep;
       });
-      // Center text
+      const avgCal = Math.round(total / n);
       const isDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
       ctx.fillStyle = isDark ? '#E8E6E1' : '#1A1A1A';
       ctx.font = '600 18px DM Sans, sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(Math.round(total), cx, cy - 6);
+      ctx.fillText(avgCal, cx, cy - 6);
       ctx.fillStyle = '#9C9B96';
       ctx.font = '11px DM Sans, sans-serif';
-      ctx.fillText('cal', cx, cy + 10);
+      ctx.fillText('avg cal', cx, cy + 10);
 
       document.getElementById('donutLegend').innerHTML = labels.map((l, i) =>
         `<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${colors[i]}"></span>${l}<span class="donut-legend-pct">${Math.round(pcts[i]*100)}%</span></div>`
