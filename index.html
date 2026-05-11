@@ -579,21 +579,23 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 8px 0 4px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 4px;
+      padding: 10px 12px;
+      background: var(--bg-input);
+      border-radius: var(--radius-sm);
+      margin: 12px 0 2px;
     }
-    .meal-group-header:first-child { padding-top: 0; }
+    .meal-group-header:first-child { margin-top: 0; }
     .meal-group-label {
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--text-3);
+      color: var(--text-1);
     }
     .meal-group-subtotal {
-      font-size: 11px;
-      color: var(--text-3);
+      font-size: 12px;
+      color: var(--text-2);
+      font-weight: 500;
     }
     .meal-item-swipe {
       position: relative;
@@ -1051,7 +1053,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.05</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.06</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1289,6 +1291,9 @@
     function supaUrl() { return document.getElementById('supaUrl').value.trim(); }
     function supaKey_() { return document.getElementById('supaKey').value.trim(); }
 
+    const SUPA_TIMEOUT = 8000;
+    let offlineQueue = [];
+
     async function supa(table, method, opts = {}) {
       let endpoint = `${supaUrl()}/rest/v1/${table}`;
       if (opts.query) endpoint += '?' + opts.query;
@@ -1301,13 +1306,52 @@
       if (method === 'PATCH') headers['Prefer'] = 'return=representation';
       const fetchOpts = { method, headers };
       if (opts.body) fetchOpts.body = JSON.stringify(opts.body);
-      const res = await fetch(endpoint, fetchOpts);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || 'Supabase error: ' + res.status);
+      const controller = new AbortController();
+      fetchOpts.signal = controller.signal;
+      const timer = setTimeout(() => controller.abort(), SUPA_TIMEOUT);
+      try {
+        const res = await fetch(endpoint, fetchOpts);
+        clearTimeout(timer);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || 'Supabase error: ' + res.status);
+        }
+        if (method === 'DELETE') return null;
+        return res.json();
+      } catch(e) {
+        clearTimeout(timer);
+        if (e.name === 'AbortError') {
+          logError('timeout', `${method} ${table} timed out after ${SUPA_TIMEOUT}ms`);
+          throw new Error('Connection timed out — check your Supabase URL');
+        }
+        if (!navigator.onLine && method !== 'GET') {
+          offlineQueue.push({ table, method, opts });
+          logError('offline', `Queued ${method} ${table} for later`);
+        }
+        throw e;
       }
-      if (method === 'DELETE') return null;
-      return res.json();
+    }
+
+    // Flush offline queue when back online
+    window.addEventListener('online', async () => {
+      if (offlineQueue.length === 0) return;
+      setSyncStatus('busy', 'syncing queued…');
+      const queue = [...offlineQueue];
+      offlineQueue = [];
+      for (const op of queue) {
+        try { await supa(op.table, op.method, op.opts); }
+        catch(e) { logError('flush', e.message); }
+      }
+      setSyncStatus('ok', 'synced');
+    });
+
+    // Error log
+    let errorLog = [];
+    function logError(type, msg) {
+      const entry = { time: new Date().toISOString(), type, msg };
+      errorLog.push(entry);
+      if (errorLog.length > 100) errorLog = errorLog.slice(-50);
+      console.error(`[nutritrack:${type}]`, msg);
     }
 
     async function init() {
@@ -1330,6 +1374,11 @@
     async function connectSupabase() {
       try {
         setSyncStatus('busy', 'syncing…');
+        if (!navigator.onLine) {
+          setSyncStatus('err', 'offline');
+          logError('connect', 'No internet connection');
+          return;
+        }
         const settings = await supa('settings', 'GET', { query: 'select=*&limit=1' });
         if (settings.length > 0) {
           const s = settings[0];
@@ -1355,8 +1404,8 @@
         renderToday();
         renderFavorites();
       } catch(e) {
-        setSyncStatus('err', 'connection error');
-        console.error('Supabase error:', e);
+        setSyncStatus('err', e.message.includes('timed out') ? 'timed out' : 'error');
+        logError('connect', e.message);
         document.getElementById('setupCard').classList.remove('hidden');
       }
     }
@@ -1372,7 +1421,11 @@
     }
 
     function setSyncStatus(state, msg) {
-      document.getElementById('syncDot').className = 'dot' + (state === 'ok' ? ' ok' : '');
+      const dot = document.getElementById('syncDot');
+      dot.className = 'dot' + (state === 'ok' ? ' ok' : '');
+      if (state === 'err') dot.style.background = 'var(--coral)';
+      else if (state === 'busy') dot.style.background = 'var(--amber)';
+      else dot.style.background = '';
       document.getElementById('syncLabel').textContent = msg;
     }
 
@@ -1686,7 +1739,7 @@
       if (wEntry) { document.getElementById('todayWeight').textContent = wEntry.value; wRow.style.display = ''; }
       else { wRow.style.display = 'none'; }
       const bars = [
-        {label:'Calories',val:t.cal,goal:goals.cal,color:'#3B82F6'},
+        {label:'Calories',val:t.cal,goal:goals.cal,color:'#22C55E'},
         {label:'Protein',val:t.prot,goal:goals.prot,color:'#3B82F6'},
         {label:'Carbs',val:t.carbs,goal:goals.carbs,color:'#F59E0B'},
         {label:'Fat',val:t.fat,goal:goals.fat,color:'#EF4444'}
