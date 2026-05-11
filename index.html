@@ -1168,7 +1168,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.07.1</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.08</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1649,7 +1649,38 @@
       document.querySelectorAll('.meal-pill').forEach(b => b.classList.toggle('active', b.dataset.type === type));
     }
 
+    // Rate limiting: max 10 calls per 60 seconds
+    const rateBucket = { calls: [], limit: 10, windowMs: 60000 };
+    function checkRateLimit() {
+      const now = Date.now();
+      rateBucket.calls = rateBucket.calls.filter(t => now - t < rateBucket.windowMs);
+      if (rateBucket.calls.length >= rateBucket.limit) {
+        const waitSec = Math.ceil((rateBucket.calls[0] + rateBucket.windowMs - now) / 1000);
+        throw new Error(`Rate limited — too many API calls. Try again in ${waitSec}s.`);
+      }
+      rateBucket.calls.push(now);
+    }
+
+    // Response cache: keyed by description, 5 min TTL
+    const responseCache = new Map();
+    const CACHE_TTL = 5 * 60 * 1000;
+    function getCached(key) {
+      const entry = responseCache.get(key);
+      if (entry && Date.now() - entry.time < CACHE_TTL) return entry.data;
+      if (entry) responseCache.delete(key);
+      return null;
+    }
+    function setCache(key, data) {
+      responseCache.set(key, { data, time: Date.now() });
+      // Evict old entries
+      if (responseCache.size > 50) {
+        const oldest = responseCache.keys().next().value;
+        responseCache.delete(oldest);
+      }
+    }
+
     async function callClaude(key, body) {
+      checkRateLimit();
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
@@ -1675,6 +1706,18 @@
       document.getElementById('previewCard').classList.remove('show');
       document.getElementById('multiPreview').innerHTML = '';
       document.getElementById('multiPreview').style.display = 'none';
+      // Check cache (keyed on lowercase description + current calibrations hash)
+      const cacheKey = desc.toLowerCase().trim() + '|' + memoryNotes.length;
+      const cached = getCached(cacheKey);
+      if (cached) {
+        pendingMeals = cached.items;
+        pendingDescription = desc;
+        if (cached.mealType) setMealType(cached.mealType);
+        showPreview(pendingMeals);
+        document.getElementById('estimating').classList.remove('show');
+        btn.disabled = false;
+        return;
+      }
       const memCtx = memoryNotes ? `\n\nPersonal calibration notes — apply these:\n${memoryNotes}\n\nAlways prioritise these over generic defaults.` : '';
       const recipeCtx = recipes.length > 0 ? `\n\nUser's saved recipes — if the meal matches one of these, use these exact values:\n${recipes.map(r => `- ${r.recipe_name}: ${r.calories} cal, ${r.protein}g P, ${r.carbs}g C, ${r.fat}g F`).join('\n')}` : '';
       try {
@@ -1707,6 +1750,8 @@
           return { ...meal, type: mt || getMealType(), description: desc, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), date: mealDate, id: Date.now() + Math.random() };
         });
         pendingDescription = desc;
+        // Cache the result (skip if web search was used — those need fresh data)
+        if (!needsSearch) setCache(cacheKey, { items: pendingMeals, mealType: mealTypeFromClaude });
         showPreview(pendingMeals);
       } catch(e) {
         document.getElementById('errorMsg').textContent = 'Error: ' + e.message;
