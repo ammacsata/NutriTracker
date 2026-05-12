@@ -31,10 +31,6 @@
     <div class="logo-row">
       <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.14</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
-        <span id="signOutArea" style="display:none;">
-          <span id="userEmail" style="font-size:11px;color:var(--text-3);"></span>
-          <button class="auth-signout" onclick="signOut()">Sign out</button>
-        </span>
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
           <span id="syncLabel">ready</span>
@@ -46,6 +42,10 @@
     </div>
 
     <div class="setup-card hidden" id="setupCard">
+      <div id="signOutArea" style="display:none;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+        <div style="font-size:13px;color:var(--text-2);">Signed in as <strong id="userEmail"></strong></div>
+        <button class="auth-signout" onclick="signOut()" style="margin-top:6px;">Sign out</button>
+      </div>
       <label>Anthropic API key</label>
       <input type="password" id="apiKey" placeholder="sk-ant-..." oninput="checkReady()" />
       <p class="setup-hint" style="margin-top:8px;">Stored in your browser only. Never sent anywhere but Anthropic.</p>

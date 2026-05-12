@@ -85,8 +85,11 @@ async function supaAuth(endpoint, body) {
     headers: { 'apikey': supaKey_(), 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error_description || err.error?.message || err.msg || err.message || 'Authentication failed');
+  }
   const data = await res.json();
-  if (data.error || data.error_description) throw new Error(data.error_description || data.error?.message || data.msg || 'Auth error');
   return data;
 }
 
@@ -134,19 +137,25 @@ async function handleAuthSuccess(data) {
   document.getElementById('authOverlay').style.display = 'none';
   document.getElementById('userEmail').textContent = currentUser.email;
   document.getElementById('signOutArea').style.display = '';
+  // Show setup card if no API key yet
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey || !apiKey.startsWith('sk-ant-')) {
+    document.getElementById('setupCard').classList.remove('hidden');
+  }
   await connectSupabase();
 }
 
 async function refreshSession() {
   try {
     const session = JSON.parse(localStorage.getItem(LS_SESSION) || '{}');
-    if (!session.refresh_token) return false;
+    if (!session.refresh_token) { console.log('No refresh token found'); return false; }
     const data = await supaAuth('token?grant_type=refresh_token', { refresh_token: session.refresh_token });
+    if (!data.access_token) { console.log('Refresh returned no access token'); return false; }
     authToken = data.access_token;
     currentUser = data.user;
     try { localStorage.setItem(LS_SESSION, JSON.stringify({ access_token: data.access_token, refresh_token: data.refresh_token, user: data.user })); } catch(e) {}
     return true;
-  } catch(e) { return false; }
+  } catch(e) { console.error('Session refresh failed:', e.message); return false; }
 }
 
 function signOut() {
@@ -158,6 +167,7 @@ function signOut() {
   try { localStorage.removeItem(LS_SESSION); } catch(e) {}
   document.getElementById('authOverlay').style.display = '';
   document.getElementById('signOutArea').style.display = 'none';
+  document.getElementById('setupCard').classList.add('hidden');
   setSyncStatus('', 'signed out');
   renderToday(); renderFavorites();
 }
@@ -193,6 +203,8 @@ async function init() {
     if (refreshed) {
       await connectSupabase();
     } else {
+      // Token expired, show auth
+      authToken = null; currentUser = null;
       document.getElementById('authOverlay').style.display = '';
       document.getElementById('signOutArea').style.display = 'none';
     }
@@ -287,10 +299,13 @@ function checkReady() {
 
 function toggleSetup() {
   const card = document.getElementById('setupCard');
-  const wasHidden = card.classList.contains('hidden');
   card.classList.toggle('hidden');
-  if (wasHidden) { document.getElementById('apiKey').focus(); }
-  else { saveCreds(); if (checkReady() && !supaReady && currentUser) connectSupabase(); }
+  if (!card.classList.contains('hidden')) {
+    document.getElementById('apiKey').focus();
+  } else {
+    saveCreds();
+    if (checkReady() && !supaReady && currentUser) connectSupabase();
+  }
 }
 
 function switchTab(name) {
