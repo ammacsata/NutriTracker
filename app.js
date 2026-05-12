@@ -630,6 +630,29 @@ async function logMealToToday(id) {
   showQuickToast(esc(meal.meal_name) + ' logged to today');
 }
 
+async function logMealGroupToToday(type, date) {
+  const groupMeals = meals.filter(m => m.date === date && m.type === type);
+  if (groupMeals.length === 0) return;
+  const now = new Date();
+  const today = fmtDate(now);
+  const time = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  let count = 0;
+  for (const meal of groupMeals) {
+    const mealData = { date:today, time, type:meal.type, meal_name:meal.meal_name, description:meal.description, calories:meal.calories, protein:meal.protein, carbs:meal.carbs, fat:meal.fat, fiber:meal.fiber||0 };
+    if (supaReady) {
+      setSyncStatus('busy','saving…');
+      try {
+        const rows = await supa('meals','POST',{body:{date:mealData.date,time:mealData.time,meal_type:mealData.type,meal_name:mealData.meal_name,description:mealData.description,calories:mealData.calories,protein:mealData.protein,carbs:mealData.carbs,fat:mealData.fat,fiber:mealData.fiber}});
+        mealData.id = rows[0].id;
+      } catch(e) { mealData.id = Date.now(); }
+    } else { mealData.id = Date.now(); }
+    meals.unshift(mealData);
+    count++;
+  }
+  if (supaReady) setSyncStatus('ok','synced');
+  showQuickToast(count + ' ' + type + ' item' + (count>1?'s':'') + ' logged to today');
+}
+
 function showUndo(msg, data) {
   if (undoTimer) clearTimeout(undoTimer);
   undoStack = { data };
@@ -833,11 +856,11 @@ function renderToday() {
   });
   const orderedKeys = [...typeOrder, 'Other'].filter(k => groups[k]);
   let html = '';
+  const isPast = ds !== fmtDate(new Date());
   orderedKeys.forEach(type => {
     const items = groups[type];
     const sub = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
-    html += `<li class="meal-group-header"><span class="meal-group-label">${esc(type)}</span><span class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F · ${sub.fiber}g f</span></li>`;
-    const isPast = ds !== fmtDate(new Date());
+    html += `<li class="meal-group-header"><span class="meal-group-label">${esc(type)}</span><span style="display:flex;align-items:center;gap:8px;"><span class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F · ${sub.fiber}g f</span>${isPast ? `<button class="log-today-btn" onclick="logMealGroupToToday('${esc(type)}','${ds}')">+Today</button>` : ''}</span></li>`;
     items.forEach(m => {
       html += `<li class="meal-item-swipe" data-id="${m.id}">
         <div class="swipe-bg">Delete</div>
