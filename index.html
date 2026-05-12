@@ -101,9 +101,6 @@
             <button class="cancel-btn" onclick="cancelEstimate()">Cancel</button>
           </div>
         </div>
-        <button class="suggest-btn" id="suggestBtn" onclick="suggestMeal()" disabled>Suggest a meal</button>
-        <p class="status-line" id="suggestLoading">Thinking…</p>
-        <div class="suggest-result" id="suggestResult"></div>
       </div>
       <div class="card">
         <div class="card-label">Log weight (lbs)</div>
@@ -157,6 +154,11 @@
       <div class="card" id="exerciseCard" style="display:none;">
         <div class="card-label">Exercise</div>
         <div id="exerciseList"></div>
+      </div>
+      <div class="card">
+        <button class="suggest-btn" id="suggestBtn" onclick="suggestMeal()" disabled>Suggest a meal</button>
+        <p class="status-line" id="suggestLoading">Thinking…</p>
+        <div class="suggest-result" id="suggestResult"></div>
       </div>
     </div>
 
