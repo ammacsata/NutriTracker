@@ -714,6 +714,23 @@
       cursor: pointer;
       padding: 0;
     }
+    .quick-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--accent);
+      color: white;
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: var(--font-body);
+      font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      transition: transform 0.25s ease;
+      z-index: 100;
+    }
+    .quick-toast.show { transform: translateX(-50%) translateY(0); }
     .empty {
       text-align: center;
       padding: 32px 16px;
@@ -1175,7 +1192,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.09</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.10</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1214,7 +1231,7 @@
     <div class="tab-panel active" id="tab-log">
       <div class="card">
         <div class="card-label">What did you eat?</div>
-        <textarea class="meal-textarea" id="mealInput" placeholder="e.g. big bowl of pasta with chicken and a glass of red wine, probably medium sized"></textarea>
+        <textarea class="meal-textarea" id="mealInput" placeholder="e.g. big bowl of pasta with chicken and a glass of red wine, probably medium sized" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();estimateMeal()}"></textarea>
         <div class="meal-pills" id="mealPills">
           <button class="meal-pill" onclick="pickMealType(this)" data-type="Breakfast">Breakfast</button>
           <button class="meal-pill active" onclick="pickMealType(this)" data-type="Lunch">Lunch</button>
@@ -1256,7 +1273,7 @@
       <div class="card">
         <div class="card-label">Log weight (lbs)</div>
         <div class="weight-input-row">
-          <input type="text" class="weight-text-field" id="weightInput" placeholder="e.g. 175, or 'yesterday 173'" />
+          <input type="text" class="weight-text-field" id="weightInput" placeholder="e.g. 175, or 'yesterday 173'" onkeydown="if(event.key==='Enter')logWeight()" />
           <button class="save-btn" onclick="logWeight()">Log</button>
         </div>
         <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Enter a number for today, or include a date like "yesterday 173".</p>
@@ -1264,7 +1281,7 @@
       <div class="card">
         <div class="card-label">Log exercise</div>
         <div class="exercise-input-row">
-          <input type="text" class="exercise-text-field" id="exerciseInput" placeholder="e.g. 30 min run, or 'yoga 200 cal'" />
+          <input type="text" class="exercise-text-field" id="exerciseInput" placeholder="e.g. 30 min run, or 'yoga 200 cal'" onkeydown="if(event.key==='Enter')logExercise()" />
           <button class="save-btn" onclick="logExercise()">Log</button>
         </div>
         <p style="font-size:11px;color:var(--text-3);margin-top:6px;">Describe your exercise — Claude will estimate calories burned.</p>
@@ -1347,15 +1364,6 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-label">My calibrations</div>
-        <p class="info-text" style="margin-bottom:12px;">Anything here is sent to Claude with every estimate. Describe your portion sizes, cooking habits, or corrections.</p>
-        <textarea class="cal-textarea" id="memoryNotes" placeholder="- My pasta portions are around 500 cal, not 700&#10;- I always use a lot of olive oil, add ~50 cal&#10;- When I say 'big' I mean restaurant-sized&#10;- I drink semi-skimmed milk"></textarea>
-        <div class="save-row">
-          <button class="save-btn" onclick="saveCalibrations()">Save calibrations</button>
-          <span class="flash" id="calFlash">Saved ✓</span>
-        </div>
-      </div>
-      <div class="card">
         <div class="card-label">Daily goals</div>
         <div class="goals-grid">
           <div class="goal-cell"><span class="goal-label">Calories</span><input class="goal-input" type="number" id="goalCal" value="2000" onchange="saveGoals()" /></div>
@@ -1363,6 +1371,15 @@
           <div class="goal-cell"><span class="goal-label">Carbs (g)</span><input class="goal-input" type="number" id="goalCarbs" value="200" onchange="saveGoals()" /></div>
           <div class="goal-cell"><span class="goal-label">Fat (g)</span><input class="goal-input" type="number" id="goalFat" value="65" onchange="saveGoals()" /></div>
           <div class="goal-cell"><span class="goal-label">Fiber (g)</span><input class="goal-input" type="number" id="goalFiber" value="25" onchange="saveGoals()" /></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-label">My calibrations</div>
+        <p class="info-text" style="margin-bottom:12px;">Anything here is sent to Claude with every estimate. Describe your portion sizes, cooking habits, or corrections.</p>
+        <textarea class="cal-textarea" id="memoryNotes" placeholder="- My pasta portions are around 500 cal, not 700&#10;- I always use a lot of olive oil, add ~50 cal&#10;- When I say 'big' I mean restaurant-sized&#10;- I drink semi-skimmed milk"></textarea>
+        <div class="save-row">
+          <button class="save-btn" onclick="saveCalibrations()">Save calibrations</button>
+          <span class="flash" id="calFlash">Saved ✓</span>
         </div>
       </div>
       <div class="card">
@@ -1432,6 +1449,7 @@
     <span id="undoMsg">Meal deleted</span>
     <button onclick="performUndo()">Undo</button>
   </div>
+  <div class="quick-toast" id="quickToast"></div>
 
   <script>
     const LS_CREDS = 'nutritrack_creds';
@@ -2103,7 +2121,7 @@
       return days;
     }
 
-    function drawChart(canvasId, datasets, labels, goalLine) {
+    function drawChart(canvasId, datasets, labels, goalLine, minVal) {
       const canvas = document.getElementById(canvasId);
       const ctx = canvas.getContext('2d');
       const dpr = window.devicePixelRatio || 1;
@@ -2114,21 +2132,23 @@
       ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
       const padL=44, padR=36, padT=16, padB=32;
       const chartW=w-padL-padR, chartH=h-padT-padB;
-      const allVals = datasets.flatMap(d=>d.data);
+      const allVals = datasets.flatMap(d=>d.data).filter(v=>v>0);
       if (goalLine) allVals.push(goalLine);
-      const maxVal = Math.max(...allVals,1)*1.15;
+      const floor = minVal != null ? minVal : 0;
+      const maxVal = Math.max(...allVals,floor+1)*1.1;
+      const range = maxVal - floor;
       const isDark = document.documentElement.classList.contains('dark-mode') || (!document.documentElement.classList.contains('light-mode') && window.matchMedia('(prefers-color-scheme:dark)').matches);
       const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
       const textColor = '#9C9B96';
       ctx.font = '11px DM Sans,sans-serif'; ctx.textAlign='right'; ctx.fillStyle=textColor;
       for (let i=0;i<=4;i++) {
         const y=padT+chartH-(i/4)*chartH;
-        ctx.fillText(Math.round((i/4)*maxVal),padL-8,y+4);
+        ctx.fillText(Math.round(floor+(i/4)*range),padL-8,y+4);
         ctx.beginPath(); ctx.strokeStyle=gridColor; ctx.lineWidth=1;
         ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
       }
       if (goalLine) {
-        const gy=padT+chartH-(goalLine/maxVal)*chartH;
+        const gy=padT+chartH-((goalLine-floor)/range)*chartH;
         ctx.beginPath(); ctx.setLineDash([4,4]);
         ctx.strokeStyle=isDark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.15)';
         ctx.moveTo(padL,gy); ctx.lineTo(w-padR,gy); ctx.stroke();
@@ -2141,9 +2161,9 @@
       labels.forEach((lbl,i) => { if (i%showEvery===0||i===labels.length-1) ctx.fillText(lbl,padL+i*step,h-8); });
       datasets.forEach(ds => {
         ctx.beginPath(); ctx.strokeStyle=ds.color; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.lineCap='round';
-        ds.data.forEach((val,i) => { const x=padL+i*step,y=padT+chartH-(val/maxVal)*chartH; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+        ds.data.forEach((val,i) => { const x=padL+i*step,y=padT+chartH-((val-floor)/range)*chartH; i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
         ctx.stroke();
-        ds.data.forEach((val,i) => { if(val>0){ctx.beginPath();ctx.fillStyle=ds.color;ctx.arc(padL+i*step,padT+chartH-(val/maxVal)*chartH,3.5,0,Math.PI*2);ctx.fill();} });
+        ds.data.forEach((val,i) => { if(val>0){ctx.beginPath();ctx.fillStyle=ds.color;ctx.arc(padL+i*step,padT+chartH-((val-floor)/range)*chartH,3.5,0,Math.PI*2);ctx.fill();} });
       });
     }
 
@@ -2211,15 +2231,25 @@
         <div class="streak-pill"><div class="streak-num">${longestStreak}</div><div class="streak-label">longest streak</div></div>
       `;
 
-      // Deficit/surplus based on weight trend
+      // Deficit/surplus based on weight trend (linear regression)
       const defRow = document.getElementById('deficitRow');
       if (weightLog.length >= 2) {
         const recent = weightLog.slice(-Math.min(weightLog.length, trendRange));
         if (recent.length >= 2) {
-          const first = recent[0], last = recent[recent.length - 1];
-          const daysBetween = (new Date(last.date) - new Date(first.date)) / (1000*60*60*24);
-          if (daysBetween > 0) {
-            const lbsPerWeek = ((last.value - first.value) / daysBetween) * 7;
+          // Linear regression: y = weight, x = day number
+          const startDate = new Date(recent[0].date + 'T12:00:00');
+          const points = recent.map(w => ({
+            x: (new Date(w.date + 'T12:00:00') - startDate) / (1000*60*60*24),
+            y: w.value
+          }));
+          const n2 = points.length;
+          const sumX = points.reduce((a,p) => a+p.x, 0);
+          const sumY = points.reduce((a,p) => a+p.y, 0);
+          const sumXY = points.reduce((a,p) => a+p.x*p.y, 0);
+          const sumX2 = points.reduce((a,p) => a+p.x*p.x, 0);
+          const slope = (n2*sumXY - sumX*sumY) / (n2*sumX2 - sumX*sumX);
+          if (isFinite(slope) && !isNaN(slope)) {
+            const lbsPerWeek = slope * 7;
             const calPerWeek = Math.round(lbsPerWeek * 3500);
             const isDeficit = calPerWeek < 0;
             defRow.style.display = '';
@@ -2269,8 +2299,13 @@
       ctx.font = '11px DM Sans, sans-serif';
       ctx.fillText('avg cal', cx, cy + 10);
 
+      // Calculate target percentages from goals (by calorie contribution)
+      const targetProtCal = goals.prot * 4, targetCarbCal = goals.carbs * 4, targetFatCal = goals.fat * 9;
+      const targetTotal = targetProtCal + targetCarbCal + targetFatCal;
+      const targetPcts = targetTotal > 0 ? [targetProtCal/targetTotal, targetCarbCal/targetTotal, targetFatCal/targetTotal] : [0,0,0];
+
       document.getElementById('donutLegend').innerHTML = labels.map((l, i) =>
-        `<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${colors[i]}"></span>${l}<span class="donut-legend-pct">${Math.round(pcts[i]*100)}%</span></div>`
+        `<div class="donut-legend-item"><span class="donut-legend-dot" style="background:${colors[i]}"></span>${l}<span class="donut-legend-pct">${Math.round(pcts[i]*100)}%/${Math.round(targetPcts[i]*100)}%</span></div>`
       ).join('');
     }
 
@@ -2297,7 +2332,15 @@
         setSyncStatus('busy','saving…');
         try { const rows=await supa('meals','POST',{body:{date:mealData.date,time:mealData.time,meal_type:mealData.type,meal_name:mealData.meal_name,description:mealData.description,calories:mealData.calories,protein:mealData.protein,carbs:mealData.carbs,fat:mealData.fat,fiber:mealData.fiber}}); mealData.id=rows[0].id; setSyncStatus('ok','synced'); } catch(e){mealData.id=Date.now();setSyncStatus('err','sync error');}
       } else { mealData.id=Date.now(); }
-      meals.unshift(mealData); viewDate=new Date(); renderToday(); switchTab('today');
+      meals.unshift(mealData); viewDate=new Date();
+      showQuickToast(esc(fav.meal_name) + ' logged');
+    }
+
+    function showQuickToast(msg) {
+      const toast = document.getElementById('quickToast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
     }
 
     function renderFavorites() {
@@ -2347,7 +2390,10 @@
       const recent=weightLog.slice(-trendRange);
       const labels=recent.map(w=>{const d=new Date(w.date+'T12:00:00');return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});});
       const cs=getComputedStyle(document.documentElement);
-      drawChart('weightChart',[{data:recent.map(w=>w.value),color:cs.getPropertyValue('--teal').trim()||'#1A7A6D'}],labels,null);
+      const vals = recent.map(w=>w.value);
+      const minW = Math.min(...vals);
+      const chartMin = Math.floor(minW * 0.9);
+      drawChart('weightChart',[{data:vals,color:cs.getPropertyValue('--teal').trim()||'#1A7A6D'}],labels,null,chartMin);
     }
 
     async function suggestMeal() {
