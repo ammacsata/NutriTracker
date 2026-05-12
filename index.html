@@ -799,6 +799,37 @@
       cursor: pointer;
       white-space: nowrap;
     }
+    .compare-toggle {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .compare-row {
+      display: grid;
+      grid-template-columns: 100px 1fr 1fr;
+      gap: 4px;
+      font-size: 13px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .compare-row:last-child { border-bottom: none; }
+    .compare-label { color: var(--text-3); }
+    .compare-val { text-align: center; font-weight: 500; color: var(--text-1); }
+    .compare-delta { font-size: 11px; font-weight: 500; }
+    .compare-delta.up { color: var(--coral); }
+    .compare-delta.down { color: var(--accent); }
+    .compare-header {
+      display: grid;
+      grid-template-columns: 100px 1fr 1fr;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-3);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
     .undo-toast {
       position: fixed;
       bottom: 24px;
@@ -1335,7 +1366,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.12</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.13</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1567,7 +1598,7 @@
         <canvas id="calChart" height="200"></canvas>
       </div>
       <div class="card">
-        <div class="card-label">Macro trends</div>
+        <div class="card-label">Macro trends (grams)</div>
         <div style="display:flex;gap:16px;margin-bottom:10px;">
           <span style="font-size:12px;color:var(--accent);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--accent);border-radius:2px;display:inline-block;"></span> Protein</span>
           <span style="font-size:12px;color:var(--amber);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--amber);border-radius:2px;display:inline-block;"></span> Carbs</span>
@@ -1575,6 +1606,24 @@
           <span style="font-size:12px;color:var(--purple);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--purple);border-radius:2px;display:inline-block;"></span> Fiber</span>
         </div>
         <canvas id="macroChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-label">Macro trends (% of calories)</div>
+        <div style="display:flex;gap:16px;margin-bottom:10px;">
+          <span style="font-size:12px;color:var(--accent);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--accent);border-radius:2px;display:inline-block;"></span> Protein</span>
+          <span style="font-size:12px;color:var(--amber);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--amber);border-radius:2px;display:inline-block;"></span> Carbs</span>
+          <span style="font-size:12px;color:var(--coral);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--coral);border-radius:2px;display:inline-block;"></span> Fat</span>
+        </div>
+        <canvas id="macroPctChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-label">Compare periods</div>
+        <div class="compare-toggle" id="compareToggle">
+          <button class="range-btn active" onclick="setCompare('week')">This week vs last</button>
+          <button class="range-btn" onclick="setCompare('14d')">14d vs prior 14d</button>
+          <button class="range-btn" onclick="setCompare('30d')">30d vs prior 30d</button>
+        </div>
+        <div id="compareResult" style="margin-top:12px;"></div>
       </div>
       <div class="card">
         <div class="card-label" id="avgLabel">Daily averages (7d)</div>
@@ -2545,6 +2594,17 @@
         {data:days.map(d=>d.fat),color:col('--coral')||'#C53D2F'},
         {data:days.map(d=>d.fiber),color:col('--purple')||'#A855F7'}
       ],labels,null);
+      // Macro percentage chart
+      const pctData = days.map(d => {
+        const totalCal = d.prot*4 + d.carbs*4 + d.fat*9;
+        if (totalCal === 0) return {prot:0,carbs:0,fat:0};
+        return { prot:Math.round((d.prot*4/totalCal)*100), carbs:Math.round((d.carbs*4/totalCal)*100), fat:Math.round((d.fat*9/totalCal)*100) };
+      });
+      drawChart('macroPctChart',[
+        {data:pctData.map(d=>d.prot),color:col('--accent')||'#2E6B3E'},
+        {data:pctData.map(d=>d.carbs),color:col('--amber')||'#B7791F'},
+        {data:pctData.map(d=>d.fat),color:col('--coral')||'#C53D2F'}
+      ],labels,null);
       const dwd=days.filter(d=>d.cal>0), n=dwd.length||1;
       const sum=dwd.reduce((a,d)=>({cal:a.cal+d.cal,prot:a.prot+d.prot,carbs:a.carbs+d.carbs,fat:a.fat+d.fat,fiber:a.fiber+d.fiber}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
       document.getElementById('avgCal').textContent=Math.round(sum.cal/n);
@@ -2556,6 +2616,58 @@
       renderSummary(days, dwd, sum, n);
       renderDonut(sum, n);
       renderWeightChart();
+      renderCompare();
+    }
+
+    let compareMode = 'week';
+    function setCompare(mode) {
+      compareMode = mode;
+      document.querySelectorAll('#compareToggle .range-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(mode==='week'?'week':mode)));
+      renderCompare();
+    }
+
+    function getDateRange(numDays, offset) {
+      const days = [];
+      for (let i = numDays - 1 + offset; i >= offset; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const ds = fmtDate(d);
+        const dm = meals.filter(m => m.date === ds);
+        const t = dm.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
+        days.push(t);
+      }
+      const n = days.filter(d=>d.cal>0).length || 1;
+      const sum = days.reduce((a,d)=>({cal:a.cal+d.cal,prot:a.prot+d.prot,carbs:a.carbs+d.carbs,fat:a.fat+d.fat,fiber:a.fiber+d.fiber}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
+      return { avg: {cal:Math.round(sum.cal/n),prot:Math.round(sum.prot/n),carbs:Math.round(sum.carbs/n),fat:Math.round(sum.fat/n),fiber:Math.round(sum.fiber/n)}, days: n };
+    }
+
+    function renderCompare() {
+      const numDays = compareMode === 'week' ? 7 : compareMode === '14d' ? 14 : 30;
+      const current = getDateRange(numDays, 0);
+      const prior = getDateRange(numDays, numDays);
+      const labels = compareMode === 'week' ? ['This week','Last week'] : compareMode === '14d' ? ['Last 14d','Prior 14d'] : ['Last 30d','Prior 30d'];
+      const metrics = [
+        {label:'Avg cal/day', cur:current.avg.cal, prev:prior.avg.cal, lessIsBetter:true},
+        {label:'Avg protein', cur:current.avg.prot, prev:prior.avg.prot, lessIsBetter:false},
+        {label:'Avg carbs', cur:current.avg.carbs, prev:prior.avg.carbs, lessIsBetter:true},
+        {label:'Avg fat', cur:current.avg.fat, prev:prior.avg.fat, lessIsBetter:true},
+        {label:'Avg fiber', cur:current.avg.fiber, prev:prior.avg.fiber, lessIsBetter:false},
+        {label:'Days tracked', cur:current.days, prev:prior.days, lessIsBetter:false}
+      ];
+      const container = document.getElementById('compareResult');
+      let html = `<div class="compare-header"><span></span><span style="text-align:center;">${labels[0]}</span><span style="text-align:center;">${labels[1]}</span></div>`;
+      metrics.forEach(m => {
+        const diff = m.cur - m.prev;
+        const pct = m.prev > 0 ? Math.round(Math.abs(diff)/m.prev*100) : 0;
+        const isGood = diff === 0 ? null : (m.lessIsBetter ? diff < 0 : diff > 0);
+        const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '';
+        const deltaClass = isGood === null ? '' : isGood ? 'down' : 'up';
+        html += `<div class="compare-row">
+          <span class="compare-label">${m.label}</span>
+          <span class="compare-val">${m.cur} ${diff!==0?`<span class="compare-delta ${deltaClass}">${arrow}${pct}%</span>`:''}</span>
+          <span class="compare-val">${m.prev}</span>
+        </div>`;
+      });
+      container.innerHTML = html;
     }
 
     function renderSummary(days, dwd, sum, n) {
