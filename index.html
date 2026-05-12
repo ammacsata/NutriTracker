@@ -1366,7 +1366,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.13</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.14</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1608,11 +1608,12 @@
         <canvas id="macroChart" height="200"></canvas>
       </div>
       <div class="card">
-        <div class="card-label">Macro trends (% of calories)</div>
+        <div class="card-label">Macro trends (% of daily goal)</div>
         <div style="display:flex;gap:16px;margin-bottom:10px;">
           <span style="font-size:12px;color:var(--accent);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--accent);border-radius:2px;display:inline-block;"></span> Protein</span>
           <span style="font-size:12px;color:var(--amber);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--amber);border-radius:2px;display:inline-block;"></span> Carbs</span>
           <span style="font-size:12px;color:var(--coral);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--coral);border-radius:2px;display:inline-block;"></span> Fat</span>
+          <span style="font-size:12px;color:var(--purple);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--purple);border-radius:2px;display:inline-block;"></span> Fiber</span>
         </div>
         <canvas id="macroPctChart" height="200"></canvas>
       </div>
@@ -1797,6 +1798,7 @@
           goals.carbs = s.goal_carbs || 200;
           goals.fat = s.goal_fat || 65;
           goals.fiber = s.goal_fiber || 25;
+          if (s.theme) loadThemeFromSupabase(s.theme);
           document.getElementById('goalCal').value = goals.cal;
           document.getElementById('goalProt').value = goals.prot;
           document.getElementById('goalCarbs').value = goals.carbs;
@@ -2594,17 +2596,19 @@
         {data:days.map(d=>d.fat),color:col('--coral')||'#C53D2F'},
         {data:days.map(d=>d.fiber),color:col('--purple')||'#A855F7'}
       ],labels,null);
-      // Macro percentage chart
-      const pctData = days.map(d => {
-        const totalCal = d.prot*4 + d.carbs*4 + d.fat*9;
-        if (totalCal === 0) return {prot:0,carbs:0,fat:0};
-        return { prot:Math.round((d.prot*4/totalCal)*100), carbs:Math.round((d.carbs*4/totalCal)*100), fat:Math.round((d.fat*9/totalCal)*100) };
-      });
+      // Macro percentage of target chart
+      const pctData = days.map(d => ({
+        prot: goals.prot > 0 ? Math.round((d.prot/goals.prot)*100) : 0,
+        carbs: goals.carbs > 0 ? Math.round((d.carbs/goals.carbs)*100) : 0,
+        fat: goals.fat > 0 ? Math.round((d.fat/goals.fat)*100) : 0,
+        fiber: goals.fiber > 0 ? Math.round((d.fiber/goals.fiber)*100) : 0
+      }));
       drawChart('macroPctChart',[
         {data:pctData.map(d=>d.prot),color:col('--accent')||'#2E6B3E'},
         {data:pctData.map(d=>d.carbs),color:col('--amber')||'#B7791F'},
-        {data:pctData.map(d=>d.fat),color:col('--coral')||'#C53D2F'}
-      ],labels,null);
+        {data:pctData.map(d=>d.fat),color:col('--coral')||'#C53D2F'},
+        {data:pctData.map(d=>d.fiber),color:col('--purple')||'#A855F7'}
+      ],labels,100);
       const dwd=days.filter(d=>d.cal>0), n=dwd.length||1;
       const sum=dwd.reduce((a,d)=>({cal:a.cal+d.cal,prot:a.prot+d.prot,carbs:a.carbs+d.carbs,fat:a.fat+d.fat,fiber:a.fiber+d.fiber}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
       document.getElementById('avgCal').textContent=Math.round(sum.cal/n);
@@ -3043,10 +3047,16 @@
       if (mode === 'dark') document.documentElement.classList.add('dark-mode');
       else if (mode === 'light') document.documentElement.classList.add('light-mode');
       try { localStorage.setItem('nutritrack_theme', mode); } catch(e) {}
+      if (supaReady) { supa('settings','PATCH',{query:'id=eq.1',body:{theme:mode}}).catch(()=>{}); }
     }
     function loadTheme() {
       const saved = localStorage.getItem('nutritrack_theme') || 'system';
       setTheme(saved);
+    }
+    function loadThemeFromSupabase(theme) {
+      if (theme && theme !== 'system') {
+        setTheme(theme);
+      }
     }
 
     init();
