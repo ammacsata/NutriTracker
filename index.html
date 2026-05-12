@@ -1306,7 +1306,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.11</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.11.1</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1994,6 +1994,12 @@
       pendingMeals = null;
       pendingDescription = null;
       clearDateBanner();
+      // Remove old entry if this was an edit
+      if (editReplacingId) {
+        meals = meals.filter(m => m.id !== editReplacingId);
+        if (supaReady) { try { await supa('meals','DELETE',{query:`id=eq.${editReplacingId}`}); } catch(e){} }
+        editReplacingId = null;
+      }
       document.getElementById('mealInput').value = '';
       document.getElementById('previewCard').classList.remove('show');
       viewDate = new Date(loggedDate + 'T12:00:00');
@@ -2001,7 +2007,7 @@
       renderToday(); switchTab('today');
     }
 
-    function cancelEstimate() { document.getElementById('previewCard').classList.remove('show'); pendingMeals = null; pendingDescription = null; clearDateBanner(); }
+    function cancelEstimate() { document.getElementById('previewCard').classList.remove('show'); pendingMeals = null; pendingDescription = null; editReplacingId = null; clearDateBanner(); }
 
     async function deleteMeal(id) {
       const meal = meals.find(m => m.id === id);
@@ -2011,16 +2017,16 @@
       if (supaReady) { try { await supa('meals', 'DELETE', { query: `id=eq.${id}` }); if (undoStack && undoStack.data.meal.id === id) undoStack.data.supaDeleted = true; } catch(e) {} }
     }
 
+    let editReplacingId = null;
+
     function editMeal(id) {
       const meal = meals.find(m => m.id === id);
       if (!meal) return;
       const mealDate = meal.date;
       const isToday = mealDate === fmtDate(new Date());
-      meals = meals.filter(m => m.id !== id);
-      renderToday();
+      editReplacingId = id;
       document.getElementById('mealInput').value = meal.description || meal.meal_name;
       setMealType(meal.type);
-      // Set date banner if editing from a past day
       if (!isToday) {
         editForDate = mealDate;
         const d = new Date(mealDate + 'T12:00:00');
@@ -2029,8 +2035,6 @@
       }
       switchTab('log');
       document.getElementById('mealInput').focus();
-      showUndo('Editing — old entry removed', { type: 'delete', meal, supaDeleted: false });
-      if (supaReady) { supa('meals', 'DELETE', { query: `id=eq.${id}` }).then(() => { if (undoStack && undoStack.data.meal.id === id) undoStack.data.supaDeleted = true; }).catch(() => {}); }
     }
 
     function clearDateBanner() {
@@ -2039,28 +2043,30 @@
     }
 
     // Inline rename
-    function startInlineRename(el, id) {
+    function startInlineRename(el, id, type) {
       if (el.contentEditable === 'true') return;
       el.contentEditable = 'true';
       el.focus();
-      // Select all text
       const range = document.createRange();
       range.selectNodeContents(el);
       const sel = window.getSelection();
       sel.removeAllRanges();
       sel.addRange(range);
+      const list = type === 'recipe' ? recipes : meals;
+      const nameKey = type === 'recipe' ? 'recipe_name' : 'meal_name';
+      const table = type === 'recipe' ? 'recipes' : 'meals';
       const finish = async () => {
         el.contentEditable = 'false';
         const newName = el.textContent.trim();
-        if (!newName) { el.textContent = meals.find(m=>m.id===id)?.meal_name || ''; return; }
-        const meal = meals.find(m => m.id === id);
-        if (meal && newName !== meal.meal_name) {
-          meal.meal_name = newName;
-          if (supaReady) { try { await supa('meals','PATCH',{query:`id=eq.${id}`,body:{meal_name:newName}}); } catch(e){} }
+        const item = list.find(x => x.id === id);
+        if (!newName) { el.textContent = item ? item[nameKey] : ''; return; }
+        if (item && newName !== item[nameKey]) {
+          item[nameKey] = newName;
+          if (supaReady) { try { await supa(table,'PATCH',{query:`id=eq.${id}`,body:{[nameKey]:newName}}); } catch(e){} }
         }
       };
       el.onblur = finish;
-      el.onkeydown = (e) => { if(e.key==='Enter'){e.preventDefault();el.blur();} if(e.key==='Escape'){el.textContent=meals.find(m=>m.id===id)?.meal_name||'';el.blur();} };
+      el.onkeydown = (e) => { if(e.key==='Enter'){e.preventDefault();el.blur();} if(e.key==='Escape'){const item=list.find(x=>x.id===id);el.textContent=item?item[nameKey]:'';el.blur();} };
     }
 
     // Edit modal
@@ -2272,7 +2278,7 @@
           html += `<li class="meal-item-swipe" data-id="${m.id}">
             <div class="swipe-bg">Delete</div>
             <div class="meal-item">
-              <div class="meal-item-left"><div class="meal-item-name" contenteditable="false" onclick="startInlineRename(this,${m.id})" data-id="${m.id}">${esc(m.meal_name)}</div><div class="meal-item-meta">${esc(m.time)} · ${m.protein}g P · ${m.carbs}g C · ${m.fat}g F · ${m.fiber||0}g f</div></div>
+              <div class="meal-item-left"><div class="meal-item-name">${esc(m.meal_name)}</div><div class="meal-item-meta">${esc(m.time)} · ${m.protein}g P · ${m.carbs}g C · ${m.fat}g F · ${m.fiber||0}g f</div></div>
               <span class="meal-item-cal" onclick="openEditModal(${m.id})" style="cursor:pointer;" title="Edit macros">${m.calories}</span>
               <div class="meal-actions">
                 ${isPast ? `<button class="log-today-btn" onclick="logMealToToday(${m.id})">+Today</button>` : ''}
@@ -2780,7 +2786,7 @@
       const sorted = [...recipes].sort((a,b) => a.recipe_name.localeCompare(b.recipe_name));
       list.innerHTML = sorted.map(r => `<div class="recipe-item">
         <div class="recipe-item-left">
-          <div class="recipe-item-name">${esc(r.recipe_name)}</div>
+          <div class="recipe-item-name" contenteditable="false" onclick="startInlineRename(this,${r.id},'recipe')" data-id="${r.id}">${esc(r.recipe_name)}</div>
           <div class="recipe-item-macros">${r.calories} cal · ${r.protein}g P · ${r.carbs}g C · ${r.fat}g F · ${r.fiber||0}g f</div>
         </div>
         <div class="recipe-item-actions">
