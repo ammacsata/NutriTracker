@@ -510,8 +510,6 @@ async function deleteMeal(id) {
   if (supaReady) { try { await supa('meals', 'DELETE', { query: `id=eq.${id}` }); if (undoStack && undoStack.data.meal.id === id) undoStack.data.supaDeleted = true; } catch(e) {} }
 }
 
-let editReplacingId = null;
-
 function editMeal(id) {
   const meal = meals.find(m => m.id === id);
   if (!meal) return;
@@ -920,7 +918,6 @@ document.addEventListener('touchend', () => {
   pullStartY = 0;
 }, {passive: true});
 
-let trendRange = 7;
 function setRange(days) { trendRange = days; document.querySelectorAll('.range-btn').forEach(b => b.classList.toggle('active', parseInt(b.textContent)===days)); renderTrends(); }
 
 function getDayTotals(numDays) {
@@ -1019,7 +1016,6 @@ function renderTrends() {
   renderCompare();
 }
 
-let compareMode = 'week';
 function setCompare(mode) {
   compareMode = mode;
   document.querySelectorAll('#compareToggle .range-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(mode==='week'?'week':mode)));
