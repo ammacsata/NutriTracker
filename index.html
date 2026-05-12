@@ -685,6 +685,120 @@
       font-size: 13px;
       line-height: 1.5;
     }
+    .meal-item-name[contenteditable] {
+      outline: none;
+      border-bottom: 1.5px dashed var(--accent);
+      cursor: text;
+      min-width: 40px;
+    }
+    .edit-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+    .edit-modal {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+    .edit-modal-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-1);
+      margin-bottom: 14px;
+    }
+    .edit-modal-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .edit-modal-label {
+      font-size: 12px;
+      color: var(--text-3);
+      width: 60px;
+      flex-shrink: 0;
+    }
+    .edit-modal-input {
+      flex: 1;
+      padding: 6px 10px;
+      font-size: 14px;
+      font-family: var(--font-body);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-input);
+      color: var(--text-1);
+      outline: none;
+    }
+    .edit-modal-input:focus { border-color: var(--border-focus); }
+    .edit-modal-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      justify-content: flex-end;
+    }
+    .edit-modal-cancel {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-family: var(--font-body);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-2);
+      cursor: pointer;
+    }
+    .edit-modal-save {
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      font-family: var(--font-body);
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      color: white;
+      cursor: pointer;
+    }
+    .date-banner {
+      background: var(--amber);
+      color: #1A1A1A;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .date-banner-x {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: #1A1A1A;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .log-today-btn {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      background: var(--accent-light);
+      border: none;
+      border-radius: 4px;
+      padding: 3px 8px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
     .undo-toast {
       position: fixed;
       bottom: 24px;
@@ -1192,7 +1306,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.10</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.11</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1229,6 +1343,10 @@
 
     <!-- LOG TAB -->
     <div class="tab-panel active" id="tab-log">
+      <div class="date-banner" id="dateBanner" style="display:none;">
+        <span id="dateBannerText">Editing for May 8</span>
+        <button class="date-banner-x" onclick="clearDateBanner()">✕</button>
+      </div>
       <div class="card">
         <div class="card-label">What did you eat?</div>
         <textarea class="meal-textarea" id="mealInput" placeholder="e.g. big bowl of pasta with chicken and a glass of red wine, probably medium sized" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();estimateMeal()}"></textarea>
@@ -1450,6 +1568,25 @@
     <button onclick="performUndo()">Undo</button>
   </div>
   <div class="quick-toast" id="quickToast"></div>
+  <div class="edit-modal-overlay" id="editOverlay" style="display:none;" onclick="if(event.target===this)closeEditModal()">
+    <div class="edit-modal">
+      <div class="edit-modal-title" id="editModalTitle">Edit meal</div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Name</span><input class="edit-modal-input" id="editName" /></div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Calories</span><input class="edit-modal-input" id="editCal" type="number" /></div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Protein</span><input class="edit-modal-input" id="editProt" type="number" /></div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Carbs</span><input class="edit-modal-input" id="editCarbs" type="number" /></div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Fat</span><input class="edit-modal-input" id="editFat" type="number" /></div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Fiber</span><input class="edit-modal-input" id="editFiber" type="number" /></div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Type</span>
+        <select class="edit-modal-input" id="editType"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+      </div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Date</span><input class="edit-modal-input" id="editDate" type="date" /></div>
+      <div class="edit-modal-actions">
+        <button class="edit-modal-cancel" onclick="closeEditModal()">Cancel</button>
+        <button class="edit-modal-save" onclick="saveEditModal()">Save</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const LS_CREDS = 'nutritrack_creds';
@@ -1468,6 +1605,8 @@
     let supaReady = false;
     let undoStack = null;
     let undoTimer = null;
+    let editingMealId = null;
+    let editForDate = null;
 
     function supaUrl() { return document.getElementById('supaUrl').value.trim(); }
     function supaKey_() { return document.getElementById('supaKey').value.trim(); }
@@ -1757,8 +1896,9 @@
         const needsSearch = detectData.content[0].text.trim().toLowerCase().startsWith('yes');
         document.getElementById('estimating').textContent = needsSearch ? 'Looking up nutrition data…' : 'Analysing your meal…';
         const today = fmtDate(new Date());
+        const defaultDate = editForDate || today;
         const estimateBody = { model: 'claude-sonnet-4-6', max_tokens: 1024,
-          system: `You are a nutrition estimation assistant.${needsSearch ? ' The user mentioned a specific restaurant or brand — use the web search tool to look up their official nutrition data before responding.' : ''} Today's date is ${today}. The user may describe one or multiple food items. Return a JSON array of items — even for a single item, wrap it in an array. Respond ONLY with a JSON array — no markdown, no preamble.\n[{"meal_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number,"date":"YYYY-MM-DD","meal_type":"Breakfast|Lunch|Dinner|Snack","note":"one sentence on source and confidence"}]\nAll numbers integers. For "date": if the user mentions a day (yesterday, last Tuesday, Monday, etc.), calculate the correct YYYY-MM-DD date relative to today (${today}). If no day is mentioned, use "${today}". For "meal_type": if the user mentions when they ate it, use that. Otherwise use "unspecified". Each distinct food item should be its own entry in the array.${recipeCtx}${memCtx}`,
+          system: `You are a nutrition estimation assistant.${needsSearch ? ' The user mentioned a specific restaurant or brand — use the web search tool to look up their official nutrition data before responding.' : ''} Today's date is ${today}. The user may describe one or multiple food items. Return a JSON array of items — even for a single item, wrap it in an array. Respond ONLY with a JSON array — no markdown, no preamble.\n[{"meal_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number,"date":"YYYY-MM-DD","meal_type":"Breakfast|Lunch|Dinner|Snack","note":"one sentence on source and confidence"}]\nAll numbers integers. For "date": if the user mentions a day (yesterday, last Tuesday, Monday, etc.), calculate the correct YYYY-MM-DD date relative to today (${today}). If no day is mentioned, use "${defaultDate}". For "meal_type": if the user mentions when they ate it, use that. Otherwise use "unspecified". Each distinct food item should be its own entry in the array.${recipeCtx}${memCtx}`,
           messages: [{ role: 'user', content: `Estimate nutrition for: ${desc}` }] };
         if (needsSearch) estimateBody.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
         const data = await callClaude(key, estimateBody);
@@ -1853,6 +1993,7 @@
       const loggedDate = pendingMeals[0].date;
       pendingMeals = null;
       pendingDescription = null;
+      clearDateBanner();
       document.getElementById('mealInput').value = '';
       document.getElementById('previewCard').classList.remove('show');
       viewDate = new Date(loggedDate + 'T12:00:00');
@@ -1860,7 +2001,7 @@
       renderToday(); switchTab('today');
     }
 
-    function cancelEstimate() { document.getElementById('previewCard').classList.remove('show'); pendingMeals = null; pendingDescription = null; }
+    function cancelEstimate() { document.getElementById('previewCard').classList.remove('show'); pendingMeals = null; pendingDescription = null; clearDateBanner(); }
 
     async function deleteMeal(id) {
       const meal = meals.find(m => m.id === id);
@@ -1873,14 +2014,118 @@
     function editMeal(id) {
       const meal = meals.find(m => m.id === id);
       if (!meal) return;
+      const mealDate = meal.date;
+      const isToday = mealDate === fmtDate(new Date());
       meals = meals.filter(m => m.id !== id);
       renderToday();
       document.getElementById('mealInput').value = meal.description || meal.meal_name;
       setMealType(meal.type);
+      // Set date banner if editing from a past day
+      if (!isToday) {
+        editForDate = mealDate;
+        const d = new Date(mealDate + 'T12:00:00');
+        document.getElementById('dateBannerText').textContent = 'Editing for ' + d.toLocaleDateString(undefined, {month:'short', day:'numeric'});
+        document.getElementById('dateBanner').style.display = '';
+      }
       switchTab('log');
       document.getElementById('mealInput').focus();
       showUndo('Editing — old entry removed', { type: 'delete', meal, supaDeleted: false });
       if (supaReady) { supa('meals', 'DELETE', { query: `id=eq.${id}` }).then(() => { if (undoStack && undoStack.data.meal.id === id) undoStack.data.supaDeleted = true; }).catch(() => {}); }
+    }
+
+    function clearDateBanner() {
+      editForDate = null;
+      document.getElementById('dateBanner').style.display = 'none';
+    }
+
+    // Inline rename
+    function startInlineRename(el, id) {
+      if (el.contentEditable === 'true') return;
+      el.contentEditable = 'true';
+      el.focus();
+      // Select all text
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      const finish = async () => {
+        el.contentEditable = 'false';
+        const newName = el.textContent.trim();
+        if (!newName) { el.textContent = meals.find(m=>m.id===id)?.meal_name || ''; return; }
+        const meal = meals.find(m => m.id === id);
+        if (meal && newName !== meal.meal_name) {
+          meal.meal_name = newName;
+          if (supaReady) { try { await supa('meals','PATCH',{query:`id=eq.${id}`,body:{meal_name:newName}}); } catch(e){} }
+        }
+      };
+      el.onblur = finish;
+      el.onkeydown = (e) => { if(e.key==='Enter'){e.preventDefault();el.blur();} if(e.key==='Escape'){el.textContent=meals.find(m=>m.id===id)?.meal_name||'';el.blur();} };
+    }
+
+    // Edit modal
+    function openEditModal(id) {
+      const meal = meals.find(m => m.id === id);
+      if (!meal) return;
+      editingMealId = id;
+      document.getElementById('editModalTitle').textContent = 'Edit: ' + meal.meal_name;
+      document.getElementById('editName').value = meal.meal_name;
+      document.getElementById('editCal').value = meal.calories;
+      document.getElementById('editProt').value = meal.protein;
+      document.getElementById('editCarbs').value = meal.carbs;
+      document.getElementById('editFat').value = meal.fat;
+      document.getElementById('editFiber').value = meal.fiber || 0;
+      document.getElementById('editType').value = meal.type;
+      document.getElementById('editDate').value = meal.date;
+      document.getElementById('editOverlay').style.display = '';
+    }
+
+    function closeEditModal() {
+      document.getElementById('editOverlay').style.display = 'none';
+      editingMealId = null;
+    }
+
+    async function saveEditModal() {
+      if (!editingMealId) return;
+      const meal = meals.find(m => m.id === editingMealId);
+      if (!meal) { closeEditModal(); return; }
+      meal.meal_name = document.getElementById('editName').value.trim() || meal.meal_name;
+      meal.calories = parseInt(document.getElementById('editCal').value) || 0;
+      meal.protein = parseInt(document.getElementById('editProt').value) || 0;
+      meal.carbs = parseInt(document.getElementById('editCarbs').value) || 0;
+      meal.fat = parseInt(document.getElementById('editFat').value) || 0;
+      meal.fiber = parseInt(document.getElementById('editFiber').value) || 0;
+      meal.type = document.getElementById('editType').value;
+      meal.date = document.getElementById('editDate').value;
+      if (supaReady) {
+        try {
+          await supa('meals','PATCH',{query:`id=eq.${editingMealId}`,body:{
+            meal_name:meal.meal_name,calories:meal.calories,protein:meal.protein,
+            carbs:meal.carbs,fat:meal.fat,fiber:meal.fiber,meal_type:meal.type,date:meal.date
+          }});
+          setSyncStatus('ok','synced');
+        } catch(e) { setSyncStatus('err','sync error'); }
+      }
+      closeEditModal();
+      renderToday();
+    }
+
+    // Log to Today
+    async function logMealToToday(id) {
+      const meal = meals.find(m => m.id === id);
+      if (!meal) return;
+      const now = new Date();
+      const mealData = { date:fmtDate(now), time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), type:meal.type, meal_name:meal.meal_name, description:meal.description, calories:meal.calories, protein:meal.protein, carbs:meal.carbs, fat:meal.fat, fiber:meal.fiber||0 };
+      if (supaReady) {
+        setSyncStatus('busy','saving…');
+        try {
+          const rows = await supa('meals','POST',{body:{date:mealData.date,time:mealData.time,meal_type:mealData.type,meal_name:mealData.meal_name,description:mealData.description,calories:mealData.calories,protein:mealData.protein,carbs:mealData.carbs,fat:mealData.fat,fiber:mealData.fiber}});
+          mealData.id = rows[0].id;
+          setSyncStatus('ok','synced');
+        } catch(e) { mealData.id = Date.now(); setSyncStatus('err','sync error'); }
+      } else { mealData.id = Date.now(); }
+      meals.unshift(mealData);
+      showQuickToast(esc(meal.meal_name) + ' logged to today');
     }
 
     function showUndo(msg, data) {
@@ -2022,13 +2267,15 @@
         const items = groups[type];
         const sub = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
         html += `<li class="meal-group-header"><span class="meal-group-label">${esc(type)}</span><span class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F · ${sub.fiber}g f</span></li>`;
+        const isPast = ds !== fmtDate(new Date());
         items.forEach(m => {
           html += `<li class="meal-item-swipe" data-id="${m.id}">
             <div class="swipe-bg">Delete</div>
             <div class="meal-item">
-              <div class="meal-item-left"><div class="meal-item-name">${esc(m.meal_name)}</div><div class="meal-item-meta">${esc(m.time)} · ${m.protein}g P · ${m.carbs}g C · ${m.fat}g F · ${m.fiber||0}g f</div></div>
-              <span class="meal-item-cal">${m.calories}</span>
+              <div class="meal-item-left"><div class="meal-item-name" contenteditable="false" onclick="startInlineRename(this,${m.id})" data-id="${m.id}">${esc(m.meal_name)}</div><div class="meal-item-meta">${esc(m.time)} · ${m.protein}g P · ${m.carbs}g C · ${m.fat}g F · ${m.fiber||0}g f</div></div>
+              <span class="meal-item-cal" onclick="openEditModal(${m.id})" style="cursor:pointer;" title="Edit macros">${m.calories}</span>
               <div class="meal-actions">
+                ${isPast ? `<button class="log-today-btn" onclick="logMealToToday(${m.id})">+Today</button>` : ''}
                 <button class="edit-btn" onclick="editMeal(${m.id})" aria-label="Edit">✎</button>
                 <button class="del-btn" onclick="deleteMeal(${m.id})" aria-label="Delete">✕</button>
               </div>
