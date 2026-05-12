@@ -1,6 +1,8 @@
 // Nutritrack v1.14 — app.js
 const LS_CREDS = 'nutritrack_creds';
 const LS_SESSION = 'nutritrack_session';
+const SUPA_URL = 'https://whdamcifxsjfmnzgdrxe.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndoZGFtY2lmeHNqZm1uemdkcnhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTIyMjUsImV4cCI6MjA5NDAyODIyNX0.w6NlBPQ8Fru36r0VOf0jmcty2Ex4YCt7yEHKYC9VBNA';
 
 let meals = [], pendingMeals = null, pendingDescription = null;
 let goals = { cal: 2000, prot: 150, carbs: 200, fat: 65, fiber: 25 };
@@ -12,8 +14,8 @@ let currentUser = null, authToken = null;
 let compareMode = 'week', trendRange = 7;
 
 // ─── SUPABASE HELPERS ───
-function supaUrl() { return document.getElementById('supaUrl').value.trim(); }
-function supaKey_() { return document.getElementById('supaKey').value.trim(); }
+function supaUrl() { return SUPA_URL; }
+function supaKey_() { return SUPA_KEY; }
 
 const SUPA_TIMEOUT = 8000;
 let offlineQueue = [];
@@ -177,35 +179,25 @@ async function init() {
   try {
     const c = JSON.parse(localStorage.getItem(LS_CREDS) || '{}');
     if (c.apiKey) document.getElementById('apiKey').value = c.apiKey;
-    if (c.supaUrl) document.getElementById('supaUrl').value = c.supaUrl;
-    if (c.supaKey) document.getElementById('supaKey').value = c.supaKey;
   } catch(e) {}
 
-  const hasSupaCreds = supaUrl().startsWith('https://') && supaKey_().length > 20;
-  if (!hasSupaCreds) {
-    document.getElementById('setupCard').classList.remove('hidden');
+  // Try to restore session
+  const session = JSON.parse(localStorage.getItem(LS_SESSION) || '{}');
+  if (session.access_token) {
+    authToken = session.access_token;
+    currentUser = session.user;
     document.getElementById('authOverlay').style.display = 'none';
-  } else {
-    // Try to restore session
-    const session = JSON.parse(localStorage.getItem(LS_SESSION) || '{}');
-    if (session.access_token) {
-      authToken = session.access_token;
-      currentUser = session.user;
-      document.getElementById('authOverlay').style.display = 'none';
-      document.getElementById('userEmail').textContent = currentUser?.email || '';
-      document.getElementById('signOutArea').style.display = '';
-      // Try refresh to get fresh token
-      const refreshed = await refreshSession();
-      if (refreshed) {
-        await connectSupabase();
-      } else {
-        // Token expired, show auth
-        document.getElementById('authOverlay').style.display = '';
-        document.getElementById('signOutArea').style.display = 'none';
-      }
+    document.getElementById('userEmail').textContent = currentUser?.email || '';
+    document.getElementById('signOutArea').style.display = '';
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      await connectSupabase();
     } else {
       document.getElementById('authOverlay').style.display = '';
+      document.getElementById('signOutArea').style.display = 'none';
     }
+  } else {
+    document.getElementById('authOverlay').style.display = '';
   }
 
   checkReady();
@@ -258,7 +250,7 @@ async function connectSupabase() {
 }
 
 function saveCreds() {
-  try { localStorage.setItem(LS_CREDS, JSON.stringify({ apiKey: document.getElementById('apiKey').value.trim(), supaUrl: supaUrl(), supaKey: supaKey_() })); } catch(e) {}
+  try { localStorage.setItem(LS_CREDS, JSON.stringify({ apiKey: document.getElementById('apiKey').value.trim() })); } catch(e) {}
 }
 
 function setSyncStatus(state, msg) {
@@ -283,16 +275,14 @@ function esc(s) { const d = document.createElement('div'); d.textContent = s; re
 
 function checkReady() {
   const k = document.getElementById('apiKey').value.trim();
-  const su = supaUrl(), sk = supaKey_();
   const apiOk = k.startsWith('sk-ant-') && k.length > 20;
-  const supaOk = su.startsWith('https://') && sk.length > 20;
   document.getElementById('estimateBtn').disabled = !apiOk;
   document.getElementById('suggestBtn').disabled = !apiOk;
   document.getElementById('recipeEstBtn').disabled = !apiOk;
-  document.getElementById('syncDot').classList.toggle('ok', apiOk && supaOk && supaReady);
-  document.getElementById('settingsBtn').classList.toggle('has-key', apiOk && supaOk);
+  document.getElementById('syncDot').classList.toggle('ok', apiOk && supaReady);
+  document.getElementById('settingsBtn').classList.toggle('has-key', apiOk);
   saveCreds();
-  return apiOk && supaOk;
+  return apiOk;
 }
 
 function toggleSetup() {

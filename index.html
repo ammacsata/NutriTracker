@@ -48,15 +48,7 @@
     <div class="setup-card hidden" id="setupCard">
       <label>Anthropic API key</label>
       <input type="password" id="apiKey" placeholder="sk-ant-..." oninput="checkReady()" />
-      <div style="margin-top:12px;">
-        <label>Supabase URL</label>
-        <input type="text" id="supaUrl" placeholder="https://abcdefgh.supabase.co" oninput="checkReady()" style="width:100%;padding:10px 14px;font-size:14px;font-family:var(--font-body);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--text-1);outline:none;" />
-      </div>
-      <div style="margin-top:12px;">
-        <label>Supabase anon key</label>
-        <input type="password" id="supaKey" placeholder="eyJ..." oninput="checkReady()" style="width:100%;padding:10px 14px;font-size:14px;font-family:var(--font-body);border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-input);color:var(--text-1);outline:none;" />
-      </div>
-      <p class="setup-hint" style="margin-top:8px;">All credentials stored in your browser only.</p>
+      <p class="setup-hint" style="margin-top:8px;">Stored in your browser only. Never sent anywhere but Anthropic.</p>
     </div>
 
     <div class="pull-indicator" id="pullIndicator">↻ Release to refresh</div>
