@@ -29,6 +29,8 @@
       --coral-light: #FEECEB;
       --teal: #1A7A6D;
       --teal-light: #E6F5F3;
+      --purple: #A855F7;
+      --purple-light: #F3E8FF;
       --font-display: 'Fraunces', serif;
       --font-body: 'DM Sans', sans-serif;
       --radius-sm: 8px;
@@ -58,6 +60,8 @@
         --coral-light: #2E1614;
         --teal: #52C4B2;
         --teal-light: #122A27;
+        --purple: #C084FC;
+        --purple-light: #2D1A4E;
       }
     }
     :root.dark-mode {
@@ -81,6 +85,8 @@
       --coral-light: #2E1614;
       --teal: #52C4B2;
       --teal-light: #122A27;
+      --purple: #C084FC;
+      --purple-light: #2D1A4E;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -349,7 +355,7 @@
     .multi-cal { color: var(--text-3); font-size: 12px; }
     .macro-row {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 8px;
     }
     .macro-cell {
@@ -478,7 +484,7 @@
 
     .totals-row {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 8px;
       margin-bottom: 16px;
     }
@@ -761,7 +767,7 @@
     /* Goals */
     .goals-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 8px;
     }
     .goal-cell { display: flex; flex-direction: column; gap: 4px; }
@@ -884,7 +890,7 @@
     }
     .suggest-macros {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(5, 1fr);
       gap: 6px;
     }
     .suggest-macro-cell { text-align: center; }
@@ -1169,7 +1175,7 @@
 <body>
   <div class="container">
     <div class="logo-row">
-      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.08.1</span></div>
+      <div class="logo">nutri<span>track</span> <span style="font-size:11px;font-weight:400;color:var(--text-3);margin-left:6px;">v1.09</span></div>
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="status-pill">
           <div class="dot" id="syncDot"></div>
@@ -1229,6 +1235,7 @@
             <div class="macro-cell"><div class="macro-num" id="pProt">—</div><div class="macro-label">protein</div></div>
             <div class="macro-cell"><div class="macro-num" id="pCarbs">—</div><div class="macro-label">carbs</div></div>
             <div class="macro-cell"><div class="macro-num" id="pFat">—</div><div class="macro-label">fat</div></div>
+            <div class="macro-cell"><div class="macro-num" id="pFiber">—</div><div class="macro-label">fiber</div></div>
           </div>
           <p class="preview-note" id="previewNote"></p>
 
@@ -1281,6 +1288,7 @@
           <div class="total-cell"><div class="total-num" id="totProt">0</div><div class="total-label">protein</div></div>
           <div class="total-cell"><div class="total-num" id="totCarbs">0</div><div class="total-label">carbs</div></div>
           <div class="total-cell"><div class="total-num" id="totFat">0</div><div class="total-label">fat</div></div>
+          <div class="total-cell"><div class="total-num" id="totFiber">0</div><div class="total-label">fiber</div></div>
         </div>
         <div id="todayWeightRow" style="display:none;text-align:center;padding:6px 0 4px;font-size:14px;color:var(--text-2);">
           <span style="font-weight:600;color:var(--text-1);font-family:var(--font-display);" id="todayWeight">—</span> <span>lbs today</span>
@@ -1354,6 +1362,7 @@
           <div class="goal-cell"><span class="goal-label">Protein (g)</span><input class="goal-input" type="number" id="goalProt" value="150" onchange="saveGoals()" /></div>
           <div class="goal-cell"><span class="goal-label">Carbs (g)</span><input class="goal-input" type="number" id="goalCarbs" value="200" onchange="saveGoals()" /></div>
           <div class="goal-cell"><span class="goal-label">Fat (g)</span><input class="goal-input" type="number" id="goalFat" value="65" onchange="saveGoals()" /></div>
+          <div class="goal-cell"><span class="goal-label">Fiber (g)</span><input class="goal-input" type="number" id="goalFiber" value="25" onchange="saveGoals()" /></div>
         </div>
       </div>
       <div class="card">
@@ -1396,6 +1405,7 @@
           <span style="font-size:12px;color:var(--accent);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--accent);border-radius:2px;display:inline-block;"></span> Protein</span>
           <span style="font-size:12px;color:var(--amber);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--amber);border-radius:2px;display:inline-block;"></span> Carbs</span>
           <span style="font-size:12px;color:var(--coral);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--coral);border-radius:2px;display:inline-block;"></span> Fat</span>
+          <span style="font-size:12px;color:var(--purple);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:3px;background:var(--purple);border-radius:2px;display:inline-block;"></span> Fiber</span>
         </div>
         <canvas id="macroChart" height="200"></canvas>
       </div>
@@ -1406,6 +1416,7 @@
           <div class="total-cell"><div class="total-num" id="avgProt">—</div><div class="total-label">avg protein</div></div>
           <div class="total-cell"><div class="total-num" id="avgCarbs">—</div><div class="total-label">avg carbs</div></div>
           <div class="total-cell"><div class="total-num" id="avgFat">—</div><div class="total-label">avg fat</div></div>
+          <div class="total-cell"><div class="total-num" id="avgFiber">—</div><div class="total-label">avg fiber</div></div>
         </div>
       </div>
       <div class="card">
@@ -1428,7 +1439,7 @@
     let meals = [];
     let pendingMeals = null;
     let pendingDescription = null;
-    let goals = { cal: 2000, prot: 150, carbs: 200, fat: 65 };
+    let goals = { cal: 2000, prot: 150, carbs: 200, fat: 65, fiber: 25 };
     let memoryNotes = '';
     let noteInputVisible = false;
     let viewDate = new Date();
@@ -1540,22 +1551,24 @@
           goals.prot = s.goal_prot || 150;
           goals.carbs = s.goal_carbs || 200;
           goals.fat = s.goal_fat || 65;
+          goals.fiber = s.goal_fiber || 25;
           document.getElementById('memoryNotes').value = memoryNotes;
           document.getElementById('goalCal').value = goals.cal;
           document.getElementById('goalProt').value = goals.prot;
           document.getElementById('goalCarbs').value = goals.carbs;
           document.getElementById('goalFat').value = goals.fat;
+          document.getElementById('goalFiber').value = goals.fiber;
         }
         const mealRows = await supa('meals', 'GET', { query: 'select=*&order=date.desc,time.desc' });
-        meals = mealRows.map(r => ({ id: r.id, date: r.date, time: r.time, type: r.meal_type, meal_name: r.meal_name, description: r.description, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat }));
+        meals = mealRows.map(r => ({ id: r.id, date: r.date, time: r.time, type: r.meal_type, meal_name: r.meal_name, description: r.description, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber||0 }));
         const favRows = await supa('favorites', 'GET', { query: 'select=*&order=created_at.desc' });
-        favorites = favRows.map(r => ({ id: r.id, meal_name: r.meal_name, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, type: r.meal_type, description: r.description }));
+        favorites = favRows.map(r => ({ id: r.id, meal_name: r.meal_name, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber||0, type: r.meal_type, description: r.description }));
         const weightRows = await supa('weight_log', 'GET', { query: 'select=*&order=date.asc' });
         weightLog = weightRows.map(r => ({ id: r.id, date: r.date, value: r.value }));
         const exRows = await supa('exercise', 'GET', { query: 'select=*&order=date.desc' });
         exerciseLog = exRows.map(r => ({ id: r.id, date: r.date, description: r.description, calories_burned: r.calories_burned }));
         const recRows = await supa('recipes', 'GET', { query: 'select=*&order=created_at.desc' });
-        recipes = recRows.map(r => ({ id: r.id, recipe_name: r.recipe_name, description: r.description, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat }));
+        recipes = recRows.map(r => ({ id: r.id, recipe_name: r.recipe_name, description: r.description, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber||0 }));
         supaReady = true;
         setSyncStatus('ok', 'synced');
         renderToday();
@@ -1720,14 +1733,14 @@
         return;
       }
       const memCtx = memoryNotes ? `\n\nPersonal calibration notes — apply these:\n${memoryNotes}\n\nAlways prioritise these over generic defaults.` : '';
-      const recipeCtx = recipes.length > 0 ? `\n\nUser's saved recipes — if the meal matches one of these, use these exact values:\n${recipes.map(r => `- ${r.recipe_name}: ${r.calories} cal, ${r.protein}g P, ${r.carbs}g C, ${r.fat}g F`).join('\n')}` : '';
+      const recipeCtx = recipes.length > 0 ? `\n\nUser's saved recipes — if the meal matches one of these, use these exact values:\n${recipes.map(r => `- ${r.recipe_name}: ${r.calories} cal, ${r.protein}g P, ${r.carbs}g C, ${r.fat}g F, ${r.fiber}g f`).join('\n')}` : '';
       try {
         const detectData = await callClaude(key, { model: 'claude-sonnet-4-6', max_tokens: 50, system: 'The user will describe a meal. Respond with ONLY "yes" or "no" — does this mention a specific restaurant, fast food chain, brand name, or packaged food product? No explanation.', messages: [{ role: 'user', content: desc }] });
         const needsSearch = detectData.content[0].text.trim().toLowerCase().startsWith('yes');
         document.getElementById('estimating').textContent = needsSearch ? 'Looking up nutrition data…' : 'Analysing your meal…';
         const today = fmtDate(new Date());
         const estimateBody = { model: 'claude-sonnet-4-6', max_tokens: 1024,
-          system: `You are a nutrition estimation assistant.${needsSearch ? ' The user mentioned a specific restaurant or brand — use the web search tool to look up their official nutrition data before responding.' : ''} Today's date is ${today}. The user may describe one or multiple food items. Return a JSON array of items — even for a single item, wrap it in an array. Respond ONLY with a JSON array — no markdown, no preamble.\n[{"meal_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"date":"YYYY-MM-DD","meal_type":"Breakfast|Lunch|Dinner|Snack","note":"one sentence on source and confidence"}]\nAll numbers integers. For "date": if the user mentions a day (yesterday, last Tuesday, Monday, etc.), calculate the correct YYYY-MM-DD date relative to today (${today}). If no day is mentioned, use "${today}". For "meal_type": if the user mentions when they ate it, use that. Otherwise use "unspecified". Each distinct food item should be its own entry in the array.${recipeCtx}${memCtx}`,
+          system: `You are a nutrition estimation assistant.${needsSearch ? ' The user mentioned a specific restaurant or brand — use the web search tool to look up their official nutrition data before responding.' : ''} Today's date is ${today}. The user may describe one or multiple food items. Return a JSON array of items — even for a single item, wrap it in an array. Respond ONLY with a JSON array — no markdown, no preamble.\n[{"meal_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number,"date":"YYYY-MM-DD","meal_type":"Breakfast|Lunch|Dinner|Snack","note":"one sentence on source and confidence"}]\nAll numbers integers. For "date": if the user mentions a day (yesterday, last Tuesday, Monday, etc.), calculate the correct YYYY-MM-DD date relative to today (${today}). If no day is mentioned, use "${today}". For "meal_type": if the user mentions when they ate it, use that. Otherwise use "unspecified". Each distinct food item should be its own entry in the array.${recipeCtx}${memCtx}`,
           messages: [{ role: 'user', content: `Estimate nutrition for: ${desc}` }] };
         if (needsSearch) estimateBody.tools = [{ type: 'web_search_20250305', name: 'web_search' }];
         const data = await callClaude(key, estimateBody);
@@ -1748,7 +1761,7 @@
         pendingMeals = items.map(meal => {
           const mealDate = meal.date && /^\d{4}-\d{2}-\d{2}$/.test(meal.date) ? meal.date : today;
           const mt = meal.meal_type && meal.meal_type !== 'unspecified' ? meal.meal_type : null;
-          return { ...meal, type: mt || getMealType(), description: desc, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), date: mealDate, id: Date.now() + Math.random() };
+          return { ...meal, fiber: meal.fiber||0, type: mt || getMealType(), description: desc, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), date: mealDate, id: Date.now() + Math.random() };
         });
         pendingDescription = desc;
         // Cache the result (skip if web search was used — those need fresh data)
@@ -1765,7 +1778,7 @@
     }
 
     function showPreview(items) {
-      const totals = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat}),{cal:0,prot:0,carbs:0,fat:0});
+      const totals = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
       if (items.length === 1) {
         document.getElementById('previewName').textContent = items[0].meal_name;
         document.getElementById('multiPreview').innerHTML = '';
@@ -1780,6 +1793,7 @@
       document.getElementById('pProt').textContent = totals.prot;
       document.getElementById('pCarbs').textContent = totals.carbs;
       document.getElementById('pFat').textContent = totals.fat;
+      document.getElementById('pFiber').textContent = totals.fiber;
       const dateNote = items[0].date !== fmtDate(new Date()) ? ' · logging to ' + items[0].date : '';
       document.getElementById('previewNote').textContent = (items[0].note || '') + dateNote;
       document.getElementById('inlineNote').value = '';
@@ -1809,7 +1823,7 @@
         if (supaReady) {
           setSyncStatus('busy', 'saving…');
           try {
-            const rows = await supa('meals', 'POST', { body: { date: m.date, time: m.time, meal_type: m.type, meal_name: m.meal_name, description: m.description, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat } });
+            const rows = await supa('meals', 'POST', { body: { date: m.date, time: m.time, meal_type: m.type, meal_name: m.meal_name, description: m.description, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat, fiber: m.fiber||0 } });
             const logged = { ...m, id: rows[0].id };
             meals.unshift(logged);
             loggedMeals.push(logged);
@@ -1869,7 +1883,7 @@
         const m = action.meal;
         if (action.supaDeleted && supaReady) {
           try {
-            const rows = await supa('meals', 'POST', { body: { date: m.date, time: m.time, meal_type: m.type, meal_name: m.meal_name, description: m.description, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat } });
+            const rows = await supa('meals', 'POST', { body: { date: m.date, time: m.time, meal_type: m.type, meal_name: m.meal_name, description: m.description, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat, fiber: m.fiber||0 } });
             m.id = rows[0].id;
           } catch(e) {}
         }
@@ -1900,13 +1914,14 @@
       goals.prot = parseInt(document.getElementById('goalProt').value) || 150;
       goals.carbs = parseInt(document.getElementById('goalCarbs').value) || 200;
       goals.fat = parseInt(document.getElementById('goalFat').value) || 65;
-      if (supaReady) { try { await supa('settings', 'PATCH', { query: 'id=eq.1', body: { goal_cal: goals.cal, goal_prot: goals.prot, goal_carbs: goals.carbs, goal_fat: goals.fat } }); } catch(e) {} }
+      goals.fiber = parseInt(document.getElementById('goalFiber').value) || 25;
+      if (supaReady) { try { await supa('settings', 'PATCH', { query: 'id=eq.1', body: { goal_cal: goals.cal, goal_prot: goals.prot, goal_carbs: goals.carbs, goal_fat: goals.fat, goal_fiber: goals.fiber } }); } catch(e) {} }
       renderToday();
     }
 
     function exportCSV() {
-      const header = 'Date,Time,Meal type,Meal name,Calories,Protein,Carbs,Fat';
-      const rows = meals.map(m => [m.date, m.time, m.type, '"'+m.meal_name.replace(/"/g,'""')+'"', m.calories, m.protein, m.carbs, m.fat].join(','));
+      const header = 'Date,Time,Meal type,Meal name,Calories,Protein,Carbs,Fat,Fiber';
+      const rows = meals.map(m => [m.date, m.time, m.type, '"'+m.meal_name.replace(/"/g,'""')+'"', m.calories, m.protein, m.carbs, m.fat, m.fiber||0].join(','));
       const blob = new Blob([header+'\n'+rows.join('\n')], {type:'text/csv'});
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
       a.download = 'nutritrack_'+fmtDate(new Date())+'.csv'; a.click(); URL.revokeObjectURL(a.href);
@@ -1921,14 +1936,15 @@
           await supa('weight_log', 'DELETE', { query: 'id=gt.0' });
           await supa('exercise', 'DELETE', { query: 'id=gt.0' });
           await supa('recipes', 'DELETE', { query: 'id=gt.0' });
-          await supa('settings', 'PATCH', { query: 'id=eq.1', body: { calibrations: '', goal_cal: 2000, goal_prot: 150, goal_carbs: 200, goal_fat: 65 } });
+          await supa('settings', 'PATCH', { query: 'id=eq.1', body: { calibrations: '', goal_cal: 2000, goal_prot: 150, goal_carbs: 200, goal_fat: 65, goal_fiber: 25 } });
         } catch(e) { console.error(e); }
       }
       meals = []; favorites = []; weightLog = []; exerciseLog = []; recipes = []; memoryNotes = '';
-      goals = { cal: 2000, prot: 150, carbs: 200, fat: 65 };
+      goals = { cal: 2000, prot: 150, carbs: 200, fat: 65, fiber: 25 };
       document.getElementById('memoryNotes').value = '';
       document.getElementById('goalCal').value = 2000; document.getElementById('goalProt').value = 150;
       document.getElementById('goalCarbs').value = 200; document.getElementById('goalFat').value = 65;
+      document.getElementById('goalFiber').value = 25;
       renderToday(); renderFavorites();
     }
 
@@ -1938,12 +1954,13 @@
       const day = meals.filter(m => m.date === ds);
       const dayEx = exerciseLog.filter(e => e.date === ds);
       const exCal = dayEx.reduce((a,e) => a + e.calories_burned, 0);
-      const t = day.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat}),{cal:0,prot:0,carbs:0,fat:0});
+      const t = day.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
       const netCal = t.cal - exCal;
       document.getElementById('totCal').textContent = netCal;
       document.getElementById('totProt').textContent = t.prot;
       document.getElementById('totCarbs').textContent = t.carbs;
       document.getElementById('totFat').textContent = t.fat;
+      document.getElementById('totFiber').textContent = t.fiber;
       const wEntry = weightLog.find(w => w.date === ds);
       const wRow = document.getElementById('todayWeightRow');
       if (wEntry) { document.getElementById('todayWeight').textContent = wEntry.value; wRow.style.display = ''; }
@@ -1956,7 +1973,8 @@
         {label:'Calories (net)',val:Math.max(0,netCal),goal:goals.cal,color:'#22C55E'},
         {label:'Protein',val:t.prot,goal:goals.prot,color:'#3B82F6'},
         {label:'Carbs',val:t.carbs,goal:goals.carbs,color:'#F59E0B'},
-        {label:'Fat',val:t.fat,goal:goals.fat,color:'#EF4444'}
+        {label:'Fat',val:t.fat,goal:goals.fat,color:'#EF4444'},
+        {label:'Fiber',val:t.fiber,goal:goals.fiber,color:'#A855F7'}
       ];
       document.getElementById('progressBars').innerHTML = bars.map(b => {
         const pct = Math.min(Math.round((b.val/b.goal)*100),100);
@@ -1984,13 +2002,13 @@
       let html = '';
       orderedKeys.forEach(type => {
         const items = groups[type];
-        const sub = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat}),{cal:0,prot:0,carbs:0,fat:0});
-        html += `<li class="meal-group-header"><span class="meal-group-label">${esc(type)}</span><span class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F</span></li>`;
+        const sub = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
+        html += `<li class="meal-group-header"><span class="meal-group-label">${esc(type)}</span><span class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F · ${sub.fiber}g f</span></li>`;
         items.forEach(m => {
           html += `<li class="meal-item-swipe" data-id="${m.id}">
             <div class="swipe-bg">Delete</div>
             <div class="meal-item">
-              <div class="meal-item-left"><div class="meal-item-name">${esc(m.meal_name)}</div><div class="meal-item-meta">${esc(m.time)} · ${m.protein}g P · ${m.carbs}g C · ${m.fat}g F</div></div>
+              <div class="meal-item-left"><div class="meal-item-name">${esc(m.meal_name)}</div><div class="meal-item-meta">${esc(m.time)} · ${m.protein}g P · ${m.carbs}g C · ${m.fat}g F · ${m.fiber||0}g f</div></div>
               <span class="meal-item-cal">${m.calories}</span>
               <div class="meal-actions">
                 <button class="edit-btn" onclick="editMeal(${m.id})" aria-label="Edit">✎</button>
@@ -2079,7 +2097,7 @@
         const d = new Date(); d.setDate(d.getDate()-i);
         const ds = fmtDate(d);
         const dm = meals.filter(m => m.date === ds);
-        const t = dm.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat}),{cal:0,prot:0,carbs:0,fat:0});
+        const t = dm.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
         days.push({ date: ds, label: d.toLocaleDateString(undefined,{weekday:'short',day:'numeric'}), ...t });
       }
       return days;
@@ -2137,14 +2155,16 @@
       drawChart('macroChart',[
         {data:days.map(d=>d.prot),color:col('--accent')||'#2E6B3E'},
         {data:days.map(d=>d.carbs),color:col('--amber')||'#B7791F'},
-        {data:days.map(d=>d.fat),color:col('--coral')||'#C53D2F'}
+        {data:days.map(d=>d.fat),color:col('--coral')||'#C53D2F'},
+        {data:days.map(d=>d.fiber),color:col('--purple')||'#A855F7'}
       ],labels,null);
       const dwd=days.filter(d=>d.cal>0), n=dwd.length||1;
-      const sum=dwd.reduce((a,d)=>({cal:a.cal+d.cal,prot:a.prot+d.prot,carbs:a.carbs+d.carbs,fat:a.fat+d.fat}),{cal:0,prot:0,carbs:0,fat:0});
+      const sum=dwd.reduce((a,d)=>({cal:a.cal+d.cal,prot:a.prot+d.prot,carbs:a.carbs+d.carbs,fat:a.fat+d.fat,fiber:a.fiber+d.fiber}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
       document.getElementById('avgCal').textContent=Math.round(sum.cal/n);
       document.getElementById('avgProt').textContent=Math.round(sum.prot/n);
       document.getElementById('avgCarbs').textContent=Math.round(sum.carbs/n);
       document.getElementById('avgFat').textContent=Math.round(sum.fat/n);
+      document.getElementById('avgFiber').textContent=Math.round(sum.fiber/n);
       document.getElementById('avgLabel').textContent='Daily averages ('+trendRange+'d)';
       renderSummary(days, dwd, sum, n);
       renderDonut(sum, n);
@@ -2256,9 +2276,9 @@
 
     async function addToFavorites(meal) {
       if (favorites.some(f => f.meal_name.toLowerCase() === meal.meal_name.toLowerCase())) return;
-      const fav = { meal_name:meal.meal_name, calories:meal.calories, protein:meal.protein, carbs:meal.carbs, fat:meal.fat, type:meal.type, description:meal.description||meal.meal_name };
+      const fav = { meal_name:meal.meal_name, calories:meal.calories, protein:meal.protein, carbs:meal.carbs, fat:meal.fat, fiber:meal.fiber||0, type:meal.type, description:meal.description||meal.meal_name };
       if (supaReady) {
-        try { const rows = await supa('favorites','POST',{body:{meal_name:fav.meal_name,calories:fav.calories,protein:fav.protein,carbs:fav.carbs,fat:fav.fat,meal_type:fav.type,description:fav.description}}); fav.id=rows[0].id; } catch(e){fav.id=Date.now();}
+        try { const rows = await supa('favorites','POST',{body:{meal_name:fav.meal_name,calories:fav.calories,protein:fav.protein,carbs:fav.carbs,fat:fav.fat,fiber:fav.fiber,meal_type:fav.type,description:fav.description}}); fav.id=rows[0].id; } catch(e){fav.id=Date.now();}
       } else { fav.id=Date.now(); }
       favorites.unshift(fav);
       if (favorites.length>30) favorites=favorites.slice(0,30);
@@ -2272,10 +2292,10 @@
     async function quickLog(id) {
       const fav=favorites.find(f=>f.id===id); if(!fav)return;
       const now=new Date();
-      const mealData = {date:fmtDate(now),time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),type:fav.type,meal_name:fav.meal_name,description:fav.description,calories:fav.calories,protein:fav.protein,carbs:fav.carbs,fat:fav.fat};
+      const mealData = {date:fmtDate(now),time:now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),type:fav.type,meal_name:fav.meal_name,description:fav.description,calories:fav.calories,protein:fav.protein,carbs:fav.carbs,fat:fav.fat,fiber:fav.fiber||0};
       if (supaReady) {
         setSyncStatus('busy','saving…');
-        try { const rows=await supa('meals','POST',{body:{date:mealData.date,time:mealData.time,meal_type:mealData.type,meal_name:mealData.meal_name,description:mealData.description,calories:mealData.calories,protein:mealData.protein,carbs:mealData.carbs,fat:mealData.fat}}); mealData.id=rows[0].id; setSyncStatus('ok','synced'); } catch(e){mealData.id=Date.now();setSyncStatus('err','sync error');}
+        try { const rows=await supa('meals','POST',{body:{date:mealData.date,time:mealData.time,meal_type:mealData.type,meal_name:mealData.meal_name,description:mealData.description,calories:mealData.calories,protein:mealData.protein,carbs:mealData.carbs,fat:mealData.fat,fiber:mealData.fiber}}); mealData.id=rows[0].id; setSyncStatus('ok','synced'); } catch(e){mealData.id=Date.now();setSyncStatus('err','sync error');}
       } else { mealData.id=Date.now(); }
       meals.unshift(mealData); viewDate=new Date(); renderToday(); switchTab('today');
     }
@@ -2284,7 +2304,7 @@
       const card=document.getElementById('favoritesCard'), list=document.getElementById('favList');
       if (favorites.length===0){card.style.display='none';return;}
       card.style.display='';
-      list.innerHTML=favorites.map(f=>`<div class="fav-item"><div class="fav-item-left"><div class="fav-item-name">${esc(f.meal_name)}</div><div class="fav-item-macros">${f.calories} cal · ${f.protein}g P · ${f.carbs}g C · ${f.fat}g F</div></div><div class="fav-item-actions"><button class="fav-relog" onclick="quickLog(${f.id})">Log</button><button class="fav-remove" onclick="removeFavorite(${f.id})" aria-label="Remove">✕</button></div></div>`).join('');
+      list.innerHTML=favorites.map(f=>`<div class="fav-item"><div class="fav-item-left"><div class="fav-item-name">${esc(f.meal_name)}</div><div class="fav-item-macros">${f.calories} cal · ${f.protein}g P · ${f.carbs}g C · ${f.fat}g F · ${f.fiber||0}g f</div></div><div class="fav-item-actions"><button class="fav-relog" onclick="quickLog(${f.id})">Log</button><button class="fav-remove" onclick="removeFavorite(${f.id})" aria-label="Remove">✕</button></div></div>`).join('');
     }
 
     async function logWeight() {
@@ -2337,13 +2357,13 @@
       const result=document.getElementById('suggestResult'); result.classList.remove('show');
       const today=fmtDate(new Date());
       const dayMeals=meals.filter(m=>m.date===today);
-      const t=dayMeals.reduce((a,m)=>({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat}),{cal:0,prot:0,carbs:0,fat:0});
-      const rem={cal:Math.max(0,goals.cal-t.cal),prot:Math.max(0,goals.prot-t.prot),carbs:Math.max(0,goals.carbs-t.carbs),fat:Math.max(0,goals.fat-t.fat)};
+      const t=dayMeals.reduce((a,m)=>({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
+      const rem={cal:Math.max(0,goals.cal-t.cal),prot:Math.max(0,goals.prot-t.prot),carbs:Math.max(0,goals.carbs-t.carbs),fat:Math.max(0,goals.fat-t.fat),fiber:Math.max(0,goals.fiber-t.fiber)};
       const memCtx=memoryNotes?`\nUser's food preferences:\n${memoryNotes}`:'';
       try {
         const data=await callClaude(key,{model:'claude-sonnet-4-6',max_tokens:500,
-          system:`You are a helpful nutrition assistant. Suggest a specific, practical meal. Be concrete — name actual dishes. Respond ONLY with a JSON object, no markdown:\n{"meal_name":"short name","description":"1-2 sentence description","calories":number,"protein":number,"carbs":number,"fat":number}\nAll numbers integers.${memCtx}`,
-          messages:[{role:'user',content:`I've eaten ${t.cal} cal today (${t.prot}g P, ${t.carbs}g C, ${t.fat}g F). Remaining: ~${rem.cal} cal, ${rem.prot}g P, ${rem.carbs}g C, ${rem.fat}g F. What should I eat?`}]});
+          system:`You are a helpful nutrition assistant. Suggest a specific, practical meal. Be concrete — name actual dishes. Respond ONLY with a JSON object, no markdown:\n{"meal_name":"short name","description":"1-2 sentence description","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number}\nAll numbers integers.${memCtx}`,
+          messages:[{role:'user',content:`I've eaten ${t.cal} cal today (${t.prot}g P, ${t.carbs}g C, ${t.fat}g F, ${t.fiber}g f). Remaining: ~${rem.cal} cal, ${rem.prot}g P, ${rem.carbs}g C, ${rem.fat}g F, ${rem.fiber}g f. What should I eat?`}]});
         const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
         const jsonMatch=text.match(/\{[\s\S]*?"meal_name"[\s\S]*?\}/);
         if (jsonMatch) {
@@ -2352,7 +2372,8 @@
             {label:'cal',val:s.calories,goal:rem.cal,color:'var(--blue)'},
             {label:'protein',val:s.protein,goal:rem.prot,color:'var(--accent)'},
             {label:'carbs',val:s.carbs,goal:rem.carbs,color:'var(--amber)'},
-            {label:'fat',val:s.fat,goal:rem.fat,color:'var(--coral)'}
+            {label:'fat',val:s.fat,goal:rem.fat,color:'var(--coral)'},
+            {label:'fiber',val:s.fiber||0,goal:rem.fiber,color:'var(--purple)'}
           ];
           result.innerHTML=`<div class="suggest-card">
             <div class="suggest-card-name">${esc(s.meal_name)}</div>
@@ -2430,14 +2451,14 @@
       try {
         const data = await callClaude(key, {
           model: 'claude-sonnet-4-6', max_tokens: 300,
-          system: `You are a nutrition assistant. The user describes a recipe. Estimate total nutrition for one serving. Respond ONLY with JSON:\n{"recipe_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number}\nAll numbers integers. No markdown.`,
+          system: `You are a nutrition assistant. The user describes a recipe. Estimate total nutrition for one serving. Respond ONLY with JSON:\n{"recipe_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number}\nAll numbers integers. No markdown.`,
           messages: [{ role: 'user', content: desc }]
         });
         const text = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
         const match = text.match(/\{[\s\S]*?"recipe_name"[\s\S]*?\}/);
         if (!match) throw new Error('Could not parse recipe. Try rephrasing.');
         const r = JSON.parse(match[0].replace(/```json|```/g,'').trim());
-        const recipe = { recipe_name: r.recipe_name, description: desc, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat };
+        const recipe = { recipe_name: r.recipe_name, description: desc, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber||0 };
         if (supaReady) {
           setSyncStatus('busy','saving…');
           try {
@@ -2467,7 +2488,7 @@
       list.innerHTML = sorted.map(r => `<div class="recipe-item">
         <div class="recipe-item-left">
           <div class="recipe-item-name">${esc(r.recipe_name)}</div>
-          <div class="recipe-item-macros">${r.calories} cal · ${r.protein}g P · ${r.carbs}g C · ${r.fat}g F</div>
+          <div class="recipe-item-macros">${r.calories} cal · ${r.protein}g P · ${r.carbs}g C · ${r.fat}g F · ${r.fiber||0}g f</div>
         </div>
         <div class="recipe-item-actions">
           <button class="recipe-use" onclick="logRecipe(${r.id})">Log</button>
