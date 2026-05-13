@@ -132,6 +132,12 @@
           <span class="date-label" id="dateLabel">Today</span>
           <button class="date-btn" onclick="changeDate(1)">›</button>
         </div>
+        <div class="cal-remaining-bar" id="calRemainingBar">
+          <div class="cal-remaining-track">
+            <div class="cal-remaining-fill" id="calRemainingFill"></div>
+            <div class="cal-remaining-text" id="calRemainingText"></div>
+          </div>
+        </div>
         <div class="totals-row">
           <div class="total-cell"><div class="total-num" id="totCal">0</div><div class="total-label">net cal</div></div>
           <div class="total-cell"><div class="total-num" id="totProt">0</div><div class="total-label">protein</div></div>
@@ -197,10 +203,13 @@
         <div class="card-label">Daily goals</div>
         <div class="goals-grid">
           <div class="goal-cell"><span class="goal-label">Calories</span><input class="goal-input" type="number" id="goalCal" value="2000" onchange="saveGoals()" /></div>
-          <div class="goal-cell"><span class="goal-label">Protein (g)</span><input class="goal-input" type="number" id="goalProt" value="150" onchange="saveGoals()" /></div>
-          <div class="goal-cell"><span class="goal-label">Carbs (g)</span><input class="goal-input" type="number" id="goalCarbs" value="200" onchange="saveGoals()" /></div>
-          <div class="goal-cell"><span class="goal-label">Fat (g)</span><input class="goal-input" type="number" id="goalFat" value="65" onchange="saveGoals()" /></div>
+          <div class="goal-cell"><span class="goal-label">Protein (g)</span><input class="goal-input" type="number" id="goalProt" value="150" onchange="saveGoals()" /><span class="goal-pct" id="goalProtPct"></span></div>
+          <div class="goal-cell"><span class="goal-label">Carbs (g)</span><input class="goal-input" type="number" id="goalCarbs" value="200" onchange="saveGoals()" /><span class="goal-pct" id="goalCarbsPct"></span></div>
+          <div class="goal-cell"><span class="goal-label">Fat (g)</span><input class="goal-input" type="number" id="goalFat" value="65" onchange="saveGoals()" /><span class="goal-pct" id="goalFatPct"></span></div>
           <div class="goal-cell"><span class="goal-label">Fiber (g)</span><input class="goal-input" type="number" id="goalFiber" value="25" onchange="saveGoals()" /></div>
+        </div>
+        <div class="goal-pct-toggle" style="margin-top:10px;">
+          <button class="save-btn" onclick="toggleGoalMode()" id="goalModeBtn">Switch to % input</button>
         </div>
       </div>
       <div class="card">

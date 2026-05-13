@@ -237,6 +237,7 @@ async function connectSupabase() {
       document.getElementById('goalCarbs').value = goals.carbs;
       document.getElementById('goalFat').value = goals.fat;
       document.getElementById('goalFiber').value = goals.fiber;
+      updateGoalDisplay();
     }
     const mealRows = await supa('meals', 'GET', { query: 'select=*&order=date.desc,time.desc' });
     meals = mealRows.map(r => ({ id:r.id, date:r.date, time:r.time, type:r.meal_type, meal_name:r.meal_name, description:r.description, calories:r.calories, protein:r.protein, carbs:r.carbs, fat:r.fat, fiber:r.fiber||0 }));
@@ -764,14 +765,70 @@ async function saveCalibrations() {
   // The note is already handled by addCalibrationFromPreview
 }
 
+let goalMode = 'grams'; // 'grams' or 'pct'
+
 async function saveGoals() {
-  goals.cal = parseInt(document.getElementById('goalCal').value) || 2000;
-  goals.prot = parseInt(document.getElementById('goalProt').value) || 150;
-  goals.carbs = parseInt(document.getElementById('goalCarbs').value) || 200;
-  goals.fat = parseInt(document.getElementById('goalFat').value) || 65;
-  goals.fiber = parseInt(document.getElementById('goalFiber').value) || 25;
+  if (goalMode === 'pct') {
+    // Convert percentages to grams
+    const cal = parseInt(document.getElementById('goalCal').value) || 2000;
+    const protPct = parseInt(document.getElementById('goalProt').value) || 30;
+    const carbsPct = parseInt(document.getElementById('goalCarbs').value) || 40;
+    const fatPct = parseInt(document.getElementById('goalFat').value) || 30;
+    goals.cal = cal;
+    goals.prot = Math.round((protPct / 100 * cal) / 4);
+    goals.carbs = Math.round((carbsPct / 100 * cal) / 4);
+    goals.fat = Math.round((fatPct / 100 * cal) / 9);
+    goals.fiber = parseInt(document.getElementById('goalFiber').value) || 25;
+  } else {
+    goals.cal = parseInt(document.getElementById('goalCal').value) || 2000;
+    goals.prot = parseInt(document.getElementById('goalProt').value) || 150;
+    goals.carbs = parseInt(document.getElementById('goalCarbs').value) || 200;
+    goals.fat = parseInt(document.getElementById('goalFat').value) || 65;
+    goals.fiber = parseInt(document.getElementById('goalFiber').value) || 25;
+  }
   if (supaReady) { try { await supa('settings', 'PATCH', { query: 'user_id=eq.' + currentUser.id, body: { goal_cal: goals.cal, goal_prot: goals.prot, goal_carbs: goals.carbs, goal_fat: goals.fat, goal_fiber: goals.fiber } }); } catch(e) {} }
+  updateGoalDisplay();
   renderToday();
+}
+
+function updateGoalDisplay() {
+  const cal = goals.cal || 2000;
+  const protCal = goals.prot * 4, carbsCal = goals.carbs * 4, fatCal = goals.fat * 9;
+  const total = protCal + carbsCal + fatCal;
+  if (goalMode === 'grams') {
+    document.getElementById('goalProt').value = goals.prot;
+    document.getElementById('goalCarbs').value = goals.carbs;
+    document.getElementById('goalFat').value = goals.fat;
+    document.getElementById('goalProtPct').textContent = total > 0 ? Math.round(protCal/total*100) + '% of cal' : '';
+    document.getElementById('goalCarbsPct').textContent = total > 0 ? Math.round(carbsCal/total*100) + '% of cal' : '';
+    document.getElementById('goalFatPct').textContent = total > 0 ? Math.round(fatCal/total*100) + '% of cal' : '';
+  } else {
+    document.getElementById('goalProt').value = total > 0 ? Math.round(protCal/total*100) : 30;
+    document.getElementById('goalCarbs').value = total > 0 ? Math.round(carbsCal/total*100) : 40;
+    document.getElementById('goalFat').value = total > 0 ? Math.round(fatCal/total*100) : 30;
+    document.getElementById('goalProtPct').textContent = goals.prot + 'g';
+    document.getElementById('goalCarbsPct').textContent = goals.carbs + 'g';
+    document.getElementById('goalFatPct').textContent = goals.fat + 'g';
+  }
+}
+
+function toggleGoalMode() {
+  goalMode = goalMode === 'grams' ? 'pct' : 'grams';
+  const labels = { prot: document.querySelector('#goalProt').closest('.goal-cell').querySelector('.goal-label'),
+    carbs: document.querySelector('#goalCarbs').closest('.goal-cell').querySelector('.goal-label'),
+    fat: document.querySelector('#goalFat').closest('.goal-cell').querySelector('.goal-label') };
+  if (goalMode === 'pct') {
+    labels.prot.textContent = 'Protein (%)';
+    labels.carbs.textContent = 'Carbs (%)';
+    labels.fat.textContent = 'Fat (%)';
+    document.getElementById('goalModeBtn').textContent = 'Switch to grams';
+  } else {
+    labels.prot.textContent = 'Protein (g)';
+    labels.carbs.textContent = 'Carbs (g)';
+    labels.fat.textContent = 'Fat (g)';
+    document.getElementById('goalModeBtn').textContent = 'Switch to % input';
+  }
+  updateGoalDisplay();
 }
 
 function exportCSV() {
@@ -825,6 +882,13 @@ function renderToday() {
   const exRow = document.getElementById('todayExerciseRow');
   if (exCal > 0) { document.getElementById('todayExCal').textContent = exCal; exRow.style.display = ''; }
   else { exRow.style.display = 'none'; }
+  // Calorie remaining bar
+  const remaining = goals.cal - netCal;
+  const pctUsed = goals.cal > 0 ? Math.min(Math.round((netCal / goals.cal) * 100), 100) : 0;
+  const barColor = pctUsed < 75 ? '#22C55E' : pctUsed < 95 ? '#F59E0B' : '#EF4444';
+  document.getElementById('calRemainingFill').style.width = Math.min(pctUsed, 100) + '%';
+  document.getElementById('calRemainingFill').style.background = barColor;
+  document.getElementById('calRemainingText').textContent = remaining > 0 ? remaining + ' cal remaining' : Math.abs(remaining) + ' cal over';
   const bars = [
     {label:'Calories (net)',val:Math.max(0,netCal),goal:goals.cal,color:'#22C55E'},
     {label:'Protein',val:t.prot,goal:goals.prot,color:'#3B82F6'},
@@ -862,8 +926,7 @@ function renderToday() {
     const sub = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
     html += `<li class="meal-group-header"><span class="meal-group-label">${esc(type)}</span><span style="display:flex;align-items:center;gap:8px;"><span class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F · ${sub.fiber}g f</span>${isPast ? `<button class="log-today-btn" onclick="logMealGroupToToday('${esc(type)}','${ds}')">+Today</button>` : ''}</span></li>`;
     items.forEach(m => {
-      html += `<li class="meal-item-swipe" data-id="${m.id}">
-        <div class="swipe-bg">Delete</div>
+      html += `<li>
         <div class="meal-item">
           <div class="meal-item-left"><div class="meal-item-name">${esc(m.meal_name)}</div><div class="meal-item-meta">${esc(m.time)} · ${m.protein}g P · ${m.carbs}g C · ${m.fat}g F · ${m.fiber||0}g f</div></div>
           <span class="meal-item-cal" onclick="openEditModal(${m.id})" style="cursor:pointer;" title="Edit macros">${m.calories}</span>
@@ -877,7 +940,6 @@ function renderToday() {
     });
   });
   list.innerHTML = html;
-  initSwipe();
   // Render exercise list
   const exCard = document.getElementById('exerciseCard');
   const exList = document.getElementById('exerciseList');
@@ -892,39 +954,28 @@ function renderToday() {
   }
 }
 
-// Swipe-to-delete
-function initSwipe() {
-  document.querySelectorAll('.meal-item-swipe').forEach(el => {
-    let startX = 0, currentX = 0, swiping = false;
-    const inner = el.querySelector('.meal-item');
-    el.addEventListener('touchstart', e => {
-      startX = e.touches[0].clientX;
-      swiping = false;
-      inner.style.transition = 'none';
-    }, {passive: true});
-    el.addEventListener('touchmove', e => {
-      currentX = e.touches[0].clientX;
-      const dx = startX - currentX;
-      if (dx > 10) {
-        swiping = true;
-        el.classList.add('swiping');
-        inner.style.transform = `translateX(${Math.max(-80, -dx)}px)`;
-      }
-    }, {passive: true});
-    el.addEventListener('touchend', () => {
-      inner.style.transition = 'transform 0.2s ease';
-      const dx = startX - currentX;
-      if (dx > 60) {
-        inner.style.transform = 'translateX(-100%)';
-        const id = parseInt(el.dataset.id);
-        setTimeout(() => deleteMeal(id), 200);
-      } else {
-        inner.style.transform = 'translateX(0)';
-        el.classList.remove('swiping');
-      }
-    }, {passive: true});
-  });
-}
+// Tab swiping
+const TAB_NAMES = ['log','today','trends','recipes','settings'];
+let tabSwipeStartX = 0, tabSwipeStartY = 0, tabSwiping = false;
+document.addEventListener('touchstart', e => {
+  tabSwipeStartX = e.touches[0].clientX;
+  tabSwipeStartY = e.touches[0].clientY;
+  tabSwiping = false;
+}, {passive: true});
+document.addEventListener('touchmove', e => {
+  const dx = e.touches[0].clientX - tabSwipeStartX;
+  const dy = e.touches[0].clientY - tabSwipeStartY;
+  if (Math.abs(dx) > Math.abs(dy) * 1.5 && Math.abs(dx) > 30) tabSwiping = true;
+}, {passive: true});
+document.addEventListener('touchend', e => {
+  if (!tabSwiping) return;
+  const dx = e.changedTouches[0].clientX - tabSwipeStartX;
+  if (Math.abs(dx) < 60) return;
+  const currentTab = TAB_NAMES.find(n => document.getElementById('tab-'+n)?.classList.contains('active')) || 'log';
+  const idx = TAB_NAMES.indexOf(currentTab);
+  if (dx < -60 && idx < TAB_NAMES.length - 1) switchTab(TAB_NAMES[idx + 1]);
+  else if (dx > 60 && idx > 0) switchTab(TAB_NAMES[idx - 1]);
+}, {passive: true});
 
 // Pull-to-refresh
 let pullStartY = 0, pulling = false;

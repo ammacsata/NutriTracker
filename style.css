@@ -448,20 +448,48 @@ body {
   margin-bottom: 16px;
 }
 .date-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--bg-input);
   color: var(--text-1);
-  font-size: 18px;
+  font-size: 24px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-body);
+  font-weight: 500;
 }
 .date-btn:hover { background: var(--bg-hover); }
+.cal-remaining-bar {
+  margin-bottom: 16px;
+}
+.cal-remaining-track {
+  height: 28px;
+  border-radius: 14px;
+  background: var(--bg-input);
+  overflow: hidden;
+  position: relative;
+}
+.cal-remaining-fill {
+  height: 100%;
+  border-radius: 14px;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+.cal-remaining-text {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-display);
+  color: var(--text-1);
+  pointer-events: none;
+}
 .date-label {
   font-family: var(--font-display);
   font-size: 18px;
@@ -669,32 +697,6 @@ body {
   font-size: 12px;
   color: var(--text-2);
   font-weight: 500;
-}
-.meal-item-swipe {
-  position: relative;
-  overflow: hidden;
-  touch-action: pan-y;
-}
-.meal-item-swipe .swipe-bg {
-  position: absolute;
-  top: 0; right: 0; bottom: 0;
-  width: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--coral);
-  color: white;
-  font-size: 13px;
-  font-weight: 500;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.meal-item-swipe.swiping .swipe-bg { opacity: 1; }
-.meal-item-swipe .meal-item {
-  position: relative;
-  background: var(--bg-card);
-  transition: transform 0.2s ease;
-  z-index: 1;
 }
 .pull-indicator {
   text-align: center;
@@ -1007,6 +1009,13 @@ body {
 }
 .goal-cell { display: flex; flex-direction: column; gap: 4px; }
 .goal-label { font-size: 11px; color: var(--text-3); }
+.goal-pct {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
+  margin-top: 2px;
+  display: block;
+}
 .goal-input {
   width: 100%;
   padding: 8px;
