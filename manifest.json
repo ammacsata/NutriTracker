@@ -2,16 +2,21 @@
   "name": "Nutritrack",
   "short_name": "Nutritrack",
   "description": "AI-powered nutrition tracker",
-  "start_url": "/",
+  "start_url": "/nutritracker/",
+  "scope": "/nutritracker/",
   "display": "standalone",
   "background_color": "#141413",
   "theme_color": "#141413",
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%231A1A1A'/%3E%3Ctext x='48' y='368' font-family='system-ui,-apple-system,sans-serif' font-weight='700' font-size='288' fill='%23EAEAE6'%3EN%3C/text%3E%3Ctext x='256' y='368' font-family='system-ui,-apple-system,sans-serif' font-weight='700' font-size='288' fill='%235CB176'%3ET%3C/text%3E%3C/svg%3E",
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png"
     }
   ]
 }

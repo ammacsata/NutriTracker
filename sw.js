@@ -1,10 +1,9 @@
-const CACHE_NAME = 'nutritrack-v1.14';
+const CACHE_NAME = 'nutritrack-v1.14c';
+const BASE = '/nutritracker/';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/manifest.json'
+  BASE + 'index.html',
+  BASE + 'style.css',
+  BASE + 'app.js'
 ];
 
 self.addEventListener('install', event => {
@@ -25,20 +24,25 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  // Network-first for API calls, cache-first for assets
+  // Don't cache API calls or fonts
   if (url.hostname.includes('supabase.co') || url.hostname.includes('anthropic.com') || url.hostname.includes('googleapis.com')) {
-    return; // Let these pass through to network
+    return;
   }
+  // For navigation requests (opening the app), serve index.html
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(BASE + 'index.html'))
+    );
+    return;
+  }
+  // For other requests, try network first, fall back to cache
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      const fetched = fetch(event.request).then(response => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      }).catch(() => cached);
-      return cached || fetched;
-    })
+    fetch(event.request).then(response => {
+      if (response.ok) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+      }
+      return response;
+    }).catch(() => caches.match(event.request))
   );
 });
