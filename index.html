@@ -173,11 +173,30 @@
       <div class="card">
         <div class="card-label">Add a recipe</div>
         <textarea class="meal-textarea" id="recipeInput" placeholder="e.g. My chicken stir fry: 8oz chicken breast, 1 cup rice, mixed vegetables with soy sauce and sesame oil"></textarea>
+        <div style="margin-top:8px;">
+          <label style="font-size:12px;color:var(--text-3);">How many servings does this make?</label>
+          <input type="number" class="goal-input" id="recipePortions" value="1" min="1" style="width:80px;margin-top:4px;" />
+        </div>
         <div class="estimate-row">
-          <button class="estimate-btn" id="recipeEstBtn" onclick="estimateRecipe()" disabled>Save recipe</button>
+          <button class="estimate-btn" id="recipeEstBtn" onclick="estimateRecipe()" disabled>Estimate recipe</button>
         </div>
         <p class="status-line" id="recipeEstimating">Analysing recipe…</p>
         <p class="error-line" id="recipeError"></p>
+        <div class="preview-card" id="recipePreview">
+          <div class="preview-name" id="recipePreviewName"></div>
+          <div style="font-size:12px;color:var(--text-3);margin-bottom:10px;" id="recipePreviewPortions"></div>
+          <div class="macro-row">
+            <div class="macro-cell"><div class="macro-num" id="rpCal">—</div><div class="macro-label">cal/serving</div></div>
+            <div class="macro-cell"><div class="macro-num" id="rpProt">—</div><div class="macro-label">protein</div></div>
+            <div class="macro-cell"><div class="macro-num" id="rpCarbs">—</div><div class="macro-label">carbs</div></div>
+            <div class="macro-cell"><div class="macro-num" id="rpFat">—</div><div class="macro-label">fat</div></div>
+            <div class="macro-cell"><div class="macro-num" id="rpFiber">—</div><div class="macro-label">fiber</div></div>
+          </div>
+          <div class="action-row">
+            <button class="confirm-btn" onclick="confirmRecipe()">Save recipe</button>
+            <button class="cancel-btn" onclick="cancelRecipe()">Cancel</button>
+          </div>
+        </div>
       </div>
       <div class="card" id="recipeListCard" style="display:none;">
         <div class="card-label">My recipes</div>
@@ -185,7 +204,7 @@
       </div>
       <div class="card">
         <div class="card-label">How recipes work</div>
-        <p class="info-text">Recipes are saved with fixed nutrition values. When you log a meal that matches a recipe name, those values are used instead of a new estimate — unless you specifically say otherwise.</p>
+        <p class="info-text">Recipes are saved with fixed nutrition values per serving. When you log a meal that matches a recipe name, those values are used. You can log multiple portions at once.</p>
       </div>
     </div>
 
@@ -318,9 +337,9 @@
       <div class="edit-modal-title" id="editModalTitle">Edit meal</div>
       <div class="edit-modal-row"><span class="edit-modal-label">Name</span><input class="edit-modal-input" id="editName" /></div>
       <div class="edit-modal-row"><span class="edit-modal-label">Calories</span><input class="edit-modal-input" id="editCal" type="number" /></div>
-      <div class="edit-modal-row"><span class="edit-modal-label">Protein</span><input class="edit-modal-input" id="editProt" type="number" /></div>
-      <div class="edit-modal-row"><span class="edit-modal-label">Carbs</span><input class="edit-modal-input" id="editCarbs" type="number" /></div>
-      <div class="edit-modal-row"><span class="edit-modal-label">Fat</span><input class="edit-modal-input" id="editFat" type="number" /></div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Protein</span><input class="edit-modal-input" id="editProt" type="number" oninput="recalcEditCal()" /></div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Carbs</span><input class="edit-modal-input" id="editCarbs" type="number" oninput="recalcEditCal()" /></div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Fat</span><input class="edit-modal-input" id="editFat" type="number" oninput="recalcEditCal()" /></div>
       <div class="edit-modal-row"><span class="edit-modal-label">Fiber</span><input class="edit-modal-input" id="editFiber" type="number" /></div>
       <div class="edit-modal-row"><span class="edit-modal-label">Type</span>
         <select class="edit-modal-input" id="editType"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
@@ -337,6 +356,22 @@
       <div class="edit-modal-title">My calibrations</div>
       <div id="calModalList" style="flex:1;overflow-y:auto;margin-bottom:14px;"></div>
       <div class="edit-modal-actions"><button class="edit-modal-cancel" onclick="closeCalModal()">Close</button></div>
+    </div>
+  </div>
+  <div class="edit-modal-overlay" id="recipeLogOverlay" style="display:none;" onclick="if(event.target===this)closeRecipeLogModal()">
+    <div class="edit-modal">
+      <div class="edit-modal-title" id="recipeLogTitle">Log recipe</div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Meal</span>
+        <select class="edit-modal-input" id="recipeLogType"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select>
+      </div>
+      <div class="edit-modal-row"><span class="edit-modal-label">Portions</span>
+        <input class="edit-modal-input" id="recipeLogPortions" type="number" value="1" min="0.5" step="0.5" />
+      </div>
+      <div style="font-size:13px;color:var(--text-2);margin:8px 0;" id="recipeLogPreview"></div>
+      <div class="edit-modal-actions">
+        <button class="edit-modal-cancel" onclick="closeRecipeLogModal()">Cancel</button>
+        <button class="edit-modal-save" onclick="confirmRecipeLog()">Log</button>
+      </div>
     </div>
   </div>
 

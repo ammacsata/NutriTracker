@@ -248,7 +248,7 @@ async function connectSupabase() {
     const exRows = await supa('exercise', 'GET', { query: 'select=*&order=date.desc' });
     exerciseLog = exRows.map(r => ({ id:r.id, date:r.date, description:r.description, calories_burned:r.calories_burned }));
     const recRows = await supa('recipes', 'GET', { query: 'select=*&order=created_at.desc' });
-    recipes = recRows.map(r => ({ id:r.id, recipe_name:r.recipe_name, description:r.description, calories:r.calories, protein:r.protein, carbs:r.carbs, fat:r.fat, fiber:r.fiber||0 }));
+    recipes = recRows.map(r => ({ id:r.id, recipe_name:r.recipe_name, description:r.description, calories:r.calories, protein:r.protein, carbs:r.carbs, fat:r.fat, fiber:r.fiber||0, portions:r.portions||1 }));
     const calNoteRows = await supa('calibrations', 'GET', { query: 'select=*&order=created_at.asc' });
     calibrationNotes = calNoteRows.map(r => ({ id:r.id, note:r.note }));
     rebuildMemoryNotes(); updateCalCount();
@@ -588,6 +588,13 @@ function closeEditModal() {
   editingMealId = null;
 }
 
+function recalcEditCal() {
+  const p = parseInt(document.getElementById('editProt').value) || 0;
+  const c = parseInt(document.getElementById('editCarbs').value) || 0;
+  const f = parseInt(document.getElementById('editFat').value) || 0;
+  document.getElementById('editCal').value = p * 4 + c * 4 + f * 9;
+}
+
 async function saveEditModal() {
   if (!editingMealId) return;
   const meal = meals.find(m => m.id === editingMealId);
@@ -897,8 +904,9 @@ function renderToday() {
     {label:'Fiber',val:t.fiber,goal:goals.fiber,color:'#A855F7'}
   ];
   document.getElementById('progressBars').innerHTML = bars.map(b => {
-    const pct = Math.min(Math.round((b.val/b.goal)*100),100);
-    return `<div class="progress-row"><span class="progress-name">${b.label}</span><div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${b.color}"></div></div><span class="progress-pct">${pct}%</span></div>`;
+    const pct = b.goal > 0 ? Math.round((b.val/b.goal)*100) : 0;
+    const fillPct = Math.min(pct, 100);
+    return `<div class="progress-row"><span class="progress-name">${b.label}</span><div class="progress-track"><div class="progress-fill" style="width:${fillPct}%;background:${b.color}"></div></div><span class="progress-pct">${pct}%</span></div>`;
   }).join('');
   const list = document.getElementById('logList');
   if (day.length === 0) {
@@ -924,7 +932,7 @@ function renderToday() {
   orderedKeys.forEach(type => {
     const items = groups[type];
     const sub = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
-    html += `<li class="meal-group-header"><span class="meal-group-label">${esc(type)}</span><span style="display:flex;align-items:center;gap:8px;"><span class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F · ${sub.fiber}g f</span>${isPast ? `<button class="log-today-btn" onclick="logMealGroupToToday('${esc(type)}','${ds}')">+Today</button>` : ''}</span></li>`;
+    html += `<li class="meal-group-header"><span class="meal-group-label">${esc(type)}</span><span style="display:flex;align-items:center;gap:6px;"><span class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F · ${sub.fiber}g f</span>${isPast ? `<button class="log-today-btn" onclick="logMealGroupToToday('${esc(type)}','${ds}')">+Today</button>` : ''}<button class="log-today-btn" onclick="addMealGroupAsRecipe('${esc(type)}','${ds}')" style="background:var(--blue-light,#E8F0FE);color:var(--blue,#2B6CB0);">+Recipe</button></span></li>`;
     items.forEach(m => {
       html += `<li>
         <div class="meal-item">
@@ -1440,36 +1448,46 @@ async function deleteExercise(id) {
 }
 
 // === RECIPES ===
+let pendingRecipe = null;
+let recipeLogId = null;
+
 async function estimateRecipe() {
   const key = document.getElementById('apiKey').value.trim();
   const desc = document.getElementById('recipeInput').value.trim();
+  const portions = parseInt(document.getElementById('recipePortions').value) || 1;
   if (!desc || !key) return;
   const btn = document.getElementById('recipeEstBtn');
   btn.disabled = true;
   document.getElementById('recipeEstimating').classList.add('show');
   document.getElementById('recipeError').classList.remove('show');
+  document.getElementById('recipePreview').classList.remove('show');
   try {
     const data = await callClaude(key, {
       model: 'claude-sonnet-4-6', max_tokens: 300,
-      system: `You are a nutrition assistant. The user describes a recipe. Estimate total nutrition for one serving. Respond ONLY with JSON:\n{"recipe_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number}\nAll numbers integers. No markdown.`,
+      system: `You are a nutrition assistant. The user describes a recipe that makes ${portions} serving(s). Estimate TOTAL nutrition for the entire recipe, not per serving. Respond ONLY with JSON:\n{"recipe_name":"short name","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number}\nAll numbers integers. No markdown.`,
       messages: [{ role: 'user', content: desc }]
     });
     const text = data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
     const match = text.match(/\{[\s\S]*?"recipe_name"[\s\S]*?\}/);
     if (!match) throw new Error('Could not parse recipe. Try rephrasing.');
     const r = JSON.parse(match[0].replace(/```json|```/g,'').trim());
-    const recipe = { recipe_name: r.recipe_name, description: desc, calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat, fiber: r.fiber||0 };
-    if (supaReady) {
-      setSyncStatus('busy','saving…');
-      try {
-        const rows = await supa('recipes','POST',{body:recipe});
-        recipe.id = rows[0].id;
-        setSyncStatus('ok','synced');
-      } catch(e) { recipe.id = Date.now(); setSyncStatus('err','sync error'); }
-    } else { recipe.id = Date.now(); }
-    recipes.unshift(recipe);
-    document.getElementById('recipeInput').value = '';
-    renderRecipes();
+    // Store per-serving values
+    pendingRecipe = {
+      recipe_name: r.recipe_name, description: desc, portions,
+      calories: Math.round(r.calories / portions),
+      protein: Math.round(r.protein / portions),
+      carbs: Math.round(r.carbs / portions),
+      fat: Math.round(r.fat / portions),
+      fiber: Math.round((r.fiber||0) / portions)
+    };
+    document.getElementById('recipePreviewName').textContent = r.recipe_name;
+    document.getElementById('recipePreviewPortions').textContent = portions > 1 ? `Per serving (${portions} servings total)` : '1 serving';
+    document.getElementById('rpCal').textContent = pendingRecipe.calories;
+    document.getElementById('rpProt').textContent = pendingRecipe.protein;
+    document.getElementById('rpCarbs').textContent = pendingRecipe.carbs;
+    document.getElementById('rpFat').textContent = pendingRecipe.fat;
+    document.getElementById('rpFiber').textContent = pendingRecipe.fiber;
+    document.getElementById('recipePreview').classList.add('show');
   } catch(e) {
     document.getElementById('recipeError').textContent = 'Error: ' + e.message;
     document.getElementById('recipeError').classList.add('show');
@@ -1477,6 +1495,31 @@ async function estimateRecipe() {
     document.getElementById('recipeEstimating').classList.remove('show');
     btn.disabled = false;
   }
+}
+
+async function confirmRecipe() {
+  if (!pendingRecipe) return;
+  const recipe = { ...pendingRecipe };
+  if (supaReady) {
+    setSyncStatus('busy','saving…');
+    try {
+      const rows = await supa('recipes','POST',{body:recipe});
+      recipe.id = rows[0].id;
+      setSyncStatus('ok','synced');
+    } catch(e) { recipe.id = Date.now(); setSyncStatus('err','sync error'); }
+  } else { recipe.id = Date.now(); }
+  recipes.unshift(recipe);
+  pendingRecipe = null;
+  document.getElementById('recipeInput').value = '';
+  document.getElementById('recipePortions').value = 1;
+  document.getElementById('recipePreview').classList.remove('show');
+  renderRecipes();
+  showQuickToast(esc(recipe.recipe_name) + ' saved');
+}
+
+function cancelRecipe() {
+  pendingRecipe = null;
+  document.getElementById('recipePreview').classList.remove('show');
 }
 
 function renderRecipes() {
@@ -1488,27 +1531,98 @@ function renderRecipes() {
   list.innerHTML = sorted.map(r => `<div class="recipe-item">
     <div class="recipe-item-left">
       <div class="recipe-item-name" contenteditable="false" onclick="startInlineRename(this,${r.id},'recipe')" data-id="${r.id}">${esc(r.recipe_name)}</div>
-      <div class="recipe-item-macros">${r.calories} cal · ${r.protein}g P · ${r.carbs}g C · ${r.fat}g F · ${r.fiber||0}g f</div>
+      <div class="recipe-item-macros">${r.calories} cal · ${r.protein}g P · ${r.carbs}g C · ${r.fat}g F · ${r.fiber||0}g f${r.portions && r.portions > 1 ? ' · '+r.portions+' servings' : ''}</div>
     </div>
     <div class="recipe-item-actions">
-      <button class="recipe-use" onclick="logRecipe(${r.id})">Log</button>
+      <button class="recipe-use" onclick="openRecipeLogModal(${r.id})">+ Today</button>
       <button class="fav-remove" onclick="deleteRecipe(${r.id})" aria-label="Remove">✕</button>
     </div>
   </div>`).join('');
 }
 
-async function logRecipe(id) {
+function openRecipeLogModal(id) {
   const r = recipes.find(x => x.id === id);
   if (!r) return;
-  document.getElementById('mealInput').value = r.recipe_name;
-  switchTab('log');
-  document.getElementById('mealInput').focus();
+  recipeLogId = id;
+  document.getElementById('recipeLogTitle').textContent = 'Log: ' + r.recipe_name;
+  document.getElementById('recipeLogType').value = 'Lunch';
+  document.getElementById('recipeLogPortions').value = 1;
+  updateRecipeLogPreview();
+  document.getElementById('recipeLogOverlay').style.display = '';
+  document.getElementById('recipeLogPortions').oninput = updateRecipeLogPreview;
+}
+
+function updateRecipeLogPreview() {
+  const r = recipes.find(x => x.id === recipeLogId);
+  if (!r) return;
+  const p = parseFloat(document.getElementById('recipeLogPortions').value) || 1;
+  document.getElementById('recipeLogPreview').textContent =
+    `${Math.round(r.calories*p)} cal · ${Math.round(r.protein*p)}g P · ${Math.round(r.carbs*p)}g C · ${Math.round(r.fat*p)}g F · ${Math.round((r.fiber||0)*p)}g f`;
+}
+
+function closeRecipeLogModal() {
+  document.getElementById('recipeLogOverlay').style.display = 'none';
+  recipeLogId = null;
+}
+
+async function confirmRecipeLog() {
+  const r = recipes.find(x => x.id === recipeLogId);
+  if (!r) return;
+  const p = parseFloat(document.getElementById('recipeLogPortions').value) || 1;
+  const type = document.getElementById('recipeLogType').value;
+  const now = new Date();
+  const mealData = {
+    date: fmtDate(now), time: now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+    type, meal_name: p !== 1 ? `${r.recipe_name} (×${p})` : r.recipe_name,
+    description: r.description,
+    calories: Math.round(r.calories*p), protein: Math.round(r.protein*p),
+    carbs: Math.round(r.carbs*p), fat: Math.round(r.fat*p), fiber: Math.round((r.fiber||0)*p)
+  };
+  if (supaReady) {
+    setSyncStatus('busy','saving…');
+    try {
+      const rows = await supa('meals','POST',{body:{date:mealData.date,time:mealData.time,meal_type:mealData.type,meal_name:mealData.meal_name,description:mealData.description,calories:mealData.calories,protein:mealData.protein,carbs:mealData.carbs,fat:mealData.fat,fiber:mealData.fiber}});
+      mealData.id = rows[0].id;
+      setSyncStatus('ok','synced');
+    } catch(e) { mealData.id = Date.now(); setSyncStatus('err','sync error'); }
+  } else { mealData.id = Date.now(); }
+  meals.unshift(mealData);
+  closeRecipeLogModal();
+  showQuickToast(esc(mealData.meal_name) + ' logged');
+}
+
+async function logRecipe(id) {
+  openRecipeLogModal(id);
 }
 
 async function deleteRecipe(id) {
   recipes = recipes.filter(r => r.id !== id);
   renderRecipes();
   if (supaReady) { try { await supa('recipes','DELETE',{query:`id=eq.${id}`}); } catch(e) {} }
+}
+
+// Add meal group as recipe
+async function addMealGroupAsRecipe(type, date) {
+  const groupMeals = meals.filter(m => m.date === date && m.type === type);
+  if (groupMeals.length === 0) return;
+  const combined = groupMeals.reduce((a,m) => ({
+    cal:a.cal+m.calories, prot:a.prot+m.protein, carbs:a.carbs+m.carbs,
+    fat:a.fat+m.fat, fiber:a.fiber+(m.fiber||0)
+  }),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
+  const name = type + ' — ' + groupMeals.map(m => m.meal_name).join(', ');
+  const desc = groupMeals.map(m => m.description || m.meal_name).join('; ');
+  const recipe = { recipe_name: name, description: desc, portions: 1, calories: combined.cal, protein: combined.prot, carbs: combined.carbs, fat: combined.fat, fiber: combined.fiber };
+  if (supaReady) {
+    setSyncStatus('busy','saving…');
+    try {
+      const rows = await supa('recipes','POST',{body:recipe});
+      recipe.id = rows[0].id;
+      setSyncStatus('ok','synced');
+    } catch(e) { recipe.id = Date.now(); setSyncStatus('err','sync error'); }
+  } else { recipe.id = Date.now(); }
+  recipes.unshift(recipe);
+  renderRecipes();
+  showQuickToast(type + ' saved as recipe');
 }
 
 // === THEME ===
