@@ -932,7 +932,7 @@ function renderToday() {
   orderedKeys.forEach(type => {
     const items = groups[type];
     const sub = items.reduce((a,m) => ({cal:a.cal+m.calories,prot:a.prot+m.protein,carbs:a.carbs+m.carbs,fat:a.fat+m.fat,fiber:a.fiber+(m.fiber||0)}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
-    html += `<li class="meal-group-header"><span class="meal-group-label">${esc(type)}</span><span style="display:flex;align-items:center;gap:6px;"><span class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F · ${sub.fiber}g f</span>${isPast ? `<button class="log-today-btn" onclick="logMealGroupToToday('${esc(type)}','${ds}')">+Today</button>` : ''}<button class="log-today-btn" onclick="addMealGroupAsRecipe('${esc(type)}','${ds}')" style="background:var(--blue-light,#E8F0FE);color:var(--blue,#2B6CB0);">+Recipe</button></span></li>`;
+    html += `<li class="meal-group-header"><div class="meal-group-top"><span class="meal-group-label">${esc(type)}</span><div class="meal-group-btns">${isPast ? `<button class="log-today-btn" onclick="logMealGroupToToday('${esc(type)}','${ds}')">+Today</button>` : ''}<button class="log-today-btn" onclick="addMealGroupAsRecipe('${esc(type)}','${ds}')" style="background:var(--blue-light,#E8F0FE);color:var(--blue,#2B6CB0);">+Recipe</button></div></div><div class="meal-group-subtotal">${sub.cal} cal · ${sub.prot}g P · ${sub.carbs}g C · ${sub.fat}g F · ${sub.fiber}g f</div></li>`;
     items.forEach(m => {
       html += `<li>
         <div class="meal-item">

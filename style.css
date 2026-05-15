@@ -678,20 +678,30 @@ body {
 }
 .meal-group-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 4px;
   padding: 10px 12px;
   background: var(--bg-input);
   border-radius: var(--radius-sm);
   margin: 12px 0 2px;
 }
 .meal-group-header:first-child { margin-top: 0; }
+.meal-group-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 .meal-group-label {
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-1);
+}
+.meal-group-btns {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 .meal-group-subtotal {
   font-size: 12px;
