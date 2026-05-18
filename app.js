@@ -20,7 +20,7 @@ function supaKey_() { return SUPA_KEY; }
 const SUPA_TIMEOUT = 8000;
 let offlineQueue = [];
 
-async function supa(table, method, opts = {}) {
+async function supa(table, method, opts = {}, retried = false) {
   let endpoint = `${supaUrl()}/rest/v1/${table}`;
   if (opts.query) endpoint += '?' + opts.query;
   const token = authToken || supaKey_();
@@ -42,6 +42,20 @@ async function supa(table, method, opts = {}) {
   try {
     const res = await fetch(endpoint, fetchOpts);
     clearTimeout(timer);
+    if (res.status === 401 && !retried) {
+      // Token expired — try to refresh and retry once
+      logError('auth', '401 received, attempting token refresh');
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        // Remove user_id from body since it'll be re-added on retry
+        if (opts.body) delete opts.body.user_id;
+        return supa(table, method, opts, true);
+      } else {
+        // Refresh failed — force re-login
+        document.getElementById('authOverlay').style.display = '';
+        throw new Error('Session expired — please sign in again');
+      }
+    }
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || 'Supabase error: ' + res.status);
@@ -486,7 +500,7 @@ async function confirmLog() {
         loggedMeals.push(logged);
         await addToFavorites(m);
         setSyncStatus('ok', 'synced');
-      } catch(e) { meals.unshift(m); loggedMeals.push(m); setSyncStatus('err', 'sync error'); }
+      } catch(e) { meals.unshift(m); loggedMeals.push(m); setSyncStatus('err', 'save failed'); showQuickToast('⚠ Save failed — meal only stored locally'); logError('save', e.message); }
     } else { meals.unshift(m); loggedMeals.push(m); }
   }
   const loggedDate = pendingMeals[0].date;
@@ -1643,5 +1657,14 @@ function loadThemeFromSupabase(theme) {
     setTheme(theme);
   }
 }
+
+// Refresh auth token every 45 minutes to prevent expiry
+setInterval(async () => {
+  if (authToken && currentUser) {
+    const refreshed = await refreshSession();
+    if (refreshed) console.log('Token refreshed');
+    else console.warn('Token refresh failed');
+  }
+}, 45 * 60 * 1000);
 
 init();
