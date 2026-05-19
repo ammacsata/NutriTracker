@@ -151,6 +151,9 @@
         <div id="todayExerciseRow" style="display:none;text-align:center;padding:4px 0 8px;font-size:14px;color:var(--text-2);">
           <span style="font-weight:600;color:#22C55E;font-family:var(--font-display);" id="todayExCal">0</span> <span>cal burned</span>
         </div>
+        <div id="tdeeRow" style="display:none;text-align:center;padding:4px 0 8px;font-size:13px;color:var(--text-3);">
+          Est. TDEE: <span style="font-weight:600;color:var(--text-2);font-family:var(--font-display);" id="tdeeValue">—</span> cal/day
+        </div>
         <div id="progressBars"></div>
       </div>
       <div class="card">
@@ -247,7 +250,8 @@
         <div class="card-label">Data</div>
         <p class="info-text" style="margin-bottom:12px;">Download all your logged meals as a CSV, or clear all data to start fresh.</p>
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-          <button class="export-btn" onclick="exportCSV()">↓ Download CSV</button>
+          <button class="export-btn" onclick="exportCSV()">↓ CSV</button>
+          <button class="export-btn" onclick="exportPDF()">↓ PDF Report</button>
           <button class="reset-btn" onclick="resetAll()">Reset all data</button>
         </div>
       </div>

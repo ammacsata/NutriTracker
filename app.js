@@ -903,6 +903,8 @@ function renderToday() {
   const exRow = document.getElementById('todayExerciseRow');
   if (exCal > 0) { document.getElementById('todayExCal').textContent = exCal; exRow.style.display = ''; }
   else { exRow.style.display = 'none'; }
+  // TDEE estimate
+  renderTDEE();
   // Calorie remaining bar
   const remaining = goals.cal - netCal;
   const pctUsed = goals.cal > 0 ? Math.min(Math.round((netCal / goals.cal) * 100), 100) : 0;
@@ -1443,6 +1445,104 @@ function renderWeightChart() {
   const minW = Math.min(...vals);
   const chartMin = Math.floor(minW * 0.9);
   drawChart('weightChart',[{data:vals,color:cs.getPropertyValue('--teal').trim()||'#1A7A6D'}],labels,null,chartMin);
+}
+
+function renderTDEE() {
+  const tdeeRow = document.getElementById('tdeeRow');
+  // Need at least 2 weeks of data with both calories and weight
+  if (weightLog.length < 2) { tdeeRow.style.display = 'none'; return; }
+  // Get last 14 days of calorie data
+  const days14 = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const ds = fmtDate(d);
+    const dm = meals.filter(m => m.date === ds);
+    const dayEx = exerciseLog.filter(e => e.date === ds);
+    const cal = dm.reduce((a,m) => a + m.calories, 0);
+    const ex = dayEx.reduce((a,e) => a + e.calories_burned, 0);
+    if (cal > 0) days14.push({ date: ds, cal, ex });
+  }
+  if (days14.length < 7) { tdeeRow.style.display = 'none'; return; }
+  // Get weight change over same period using linear regression
+  const recentWeight = weightLog.filter(w => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 15);
+    return new Date(w.date + 'T12:00:00') >= cutoff;
+  });
+  if (recentWeight.length < 2) { tdeeRow.style.display = 'none'; return; }
+  const startDate = new Date(recentWeight[0].date + 'T12:00:00');
+  const points = recentWeight.map(w => ({
+    x: (new Date(w.date + 'T12:00:00') - startDate) / (1000*60*60*24),
+    y: w.value
+  }));
+  const n2 = points.length;
+  const sumX = points.reduce((a,p) => a+p.x, 0);
+  const sumY = points.reduce((a,p) => a+p.y, 0);
+  const sumXY = points.reduce((a,p) => a+p.x*p.y, 0);
+  const sumX2 = points.reduce((a,p) => a+p.x*p.x, 0);
+  const slope = (n2*sumXY - sumX*sumY) / (n2*sumX2 - sumX*sumX);
+  if (!isFinite(slope) || isNaN(slope)) { tdeeRow.style.display = 'none'; return; }
+  // TDEE = avg daily intake + (daily weight change in lbs × 3500 cal/lb)
+  const avgIntake = days14.reduce((a,d) => a + d.cal, 0) / days14.length;
+  const avgExercise = days14.reduce((a,d) => a + d.ex, 0) / days14.length;
+  const tdee = Math.round(avgIntake - avgExercise + (slope * 3500));
+  if (tdee < 500 || tdee > 8000) { tdeeRow.style.display = 'none'; return; } // sanity check
+  document.getElementById('tdeeValue').textContent = tdee;
+  tdeeRow.style.display = '';
+}
+
+function exportPDF() {
+  // Build a printable report
+  const today = fmtDate(new Date());
+  const days30 = getDayTotals(30);
+  const dwd = days30.filter(d => d.cal > 0);
+  const n = dwd.length || 1;
+  const sum = dwd.reduce((a,d) => ({cal:a.cal+d.cal,prot:a.prot+d.prot,carbs:a.carbs+d.carbs,fat:a.fat+d.fat,fiber:a.fiber+d.fiber}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
+  const avgCal = Math.round(sum.cal/n), avgProt = Math.round(sum.prot/n), avgCarbs = Math.round(sum.carbs/n), avgFat = Math.round(sum.fat/n), avgFiber = Math.round(sum.fiber/n);
+  // Recent meals (last 7 days)
+  const recent = meals.filter(m => {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+    return new Date(m.date + 'T12:00:00') >= cutoff;
+  }).sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  // Weight
+  const wRecent = weightLog.slice(-14);
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>nutritracker Report — ${today}</title>
+<style>
+body{font-family:system-ui,-apple-system,sans-serif;max-width:700px;margin:40px auto;padding:0 20px;color:#1a1a1a;font-size:14px;}
+h1{font-size:22px;margin-bottom:4px;}
+h2{font-size:16px;margin-top:28px;margin-bottom:10px;border-bottom:1px solid #ddd;padding-bottom:6px;}
+.subtitle{color:#666;font-size:13px;margin-bottom:24px;}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid #eee;}
+th{font-weight:600;color:#666;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;}
+.stat-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:10px 0;}
+.stat{text-align:center;padding:12px 6px;background:#f5f5f4;border-radius:8px;}
+.stat-num{font-size:20px;font-weight:600;}
+.stat-label{font-size:11px;color:#666;margin-top:2px;}
+.goals{color:#666;font-size:12px;margin-top:6px;}
+@media print{body{margin:20px;}}
+</style></head><body>
+<h1>nutritracker Report</h1>
+<p class="subtitle">Generated ${new Date().toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p>
+<h2>30-Day Averages</h2>
+<div class="stat-grid">
+<div class="stat"><div class="stat-num">${avgCal}</div><div class="stat-label">cal/day</div></div>
+<div class="stat"><div class="stat-num">${avgProt}g</div><div class="stat-label">protein</div></div>
+<div class="stat"><div class="stat-num">${avgCarbs}g</div><div class="stat-label">carbs</div></div>
+<div class="stat"><div class="stat-num">${avgFat}g</div><div class="stat-label">fat</div></div>
+<div class="stat"><div class="stat-num">${avgFiber}g</div><div class="stat-label">fiber</div></div>
+</div>
+<p class="goals">Goals: ${goals.cal} cal · ${goals.prot}g P · ${goals.carbs}g C · ${goals.fat}g F · ${goals.fiber}g f</p>
+<p class="goals">Days tracked: ${dwd.length} of 30</p>
+${wRecent.length >= 2 ? `<h2>Weight (last 14 entries)</h2><table><tr><th>Date</th><th>Weight (lbs)</th></tr>${wRecent.map(w => `<tr><td>${w.date}</td><td>${w.value}</td></tr>`).join('')}</table>` : ''}
+<h2>Meals (last 7 days)</h2>
+<table><tr><th>Date</th><th>Time</th><th>Meal</th><th>Cal</th><th>P</th><th>C</th><th>F</th><th>f</th></tr>
+${recent.map(m => `<tr><td>${m.date}</td><td>${m.time}</td><td>${esc(m.meal_name)}</td><td>${m.calories}</td><td>${m.protein}</td><td>${m.carbs}</td><td>${m.fat}</td><td>${m.fiber||0}</td></tr>`).join('')}
+</table>
+<p class="goals" style="margin-top:30px;text-align:center;">Generated by nutritracker</p>
+</body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 500);
 }
 
 async function suggestMeal() {
