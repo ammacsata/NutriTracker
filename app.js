@@ -1481,10 +1481,11 @@ function renderTDEE() {
   const sumX2 = points.reduce((a,p) => a+p.x*p.x, 0);
   const slope = (n2*sumXY - sumX*sumY) / (n2*sumX2 - sumX*sumX);
   if (!isFinite(slope) || isNaN(slope)) { tdeeRow.style.display = 'none'; return; }
-  // TDEE = avg daily intake + (daily weight change in lbs × 3500 cal/lb)
+  // TDEE = avg daily intake - (daily weight change in lbs × 3500 cal/lb)
+  // If losing weight (negative slope), TDEE > intake. If gaining, TDEE < intake.
   const avgIntake = days14.reduce((a,d) => a + d.cal, 0) / days14.length;
   const avgExercise = days14.reduce((a,d) => a + d.ex, 0) / days14.length;
-  const tdee = Math.round(avgIntake - avgExercise + (slope * 3500));
+  const tdee = Math.round(avgIntake - avgExercise - (slope * 3500));
   if (tdee < 500 || tdee > 8000) { tdeeRow.style.display = 'none'; return; } // sanity check
   document.getElementById('tdeeValue').textContent = tdee;
   tdeeRow.style.display = '';
