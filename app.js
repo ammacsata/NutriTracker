@@ -1,6 +1,6 @@
-// Nutritrack v1.14 — app.js
-const LS_CREDS = 'nutritrack_creds';
-const LS_SESSION = 'nutritrack_session';
+// nutritracker v1.19 — app.js
+const LS_CREDS = 'nutritracker_creds';
+const LS_SESSION = 'nutritracker_session';
 const SUPA_URL = 'https://whdamcifxsjfmnzgdrxe.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndoZGFtY2lmeHNqZm1uemdkcnhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTIyMjUsImV4cCI6MjA5NDAyODIyNX0.w6NlBPQ8Fru36r0VOf0jmcty2Ex4YCt7yEHKYC9VBNA';
 
@@ -89,7 +89,7 @@ let errorLog = [];
 function logError(type, msg) {
   errorLog.push({ time: new Date().toISOString(), type, msg });
   if (errorLog.length > 100) errorLog = errorLog.slice(-50);
-  console.error(`[nutritrack:${type}]`, msg);
+  console.error(`[nutritracker:${type}]`, msg);
 }
 
 // ─── AUTH ───
@@ -857,7 +857,7 @@ function exportCSV() {
   const rows = meals.map(m => [m.date, m.time, m.type, '"'+m.meal_name.replace(/"/g,'""')+'"', m.calories, m.protein, m.carbs, m.fat, m.fiber||0].join(','));
   const blob = new Blob([header+'\n'+rows.join('\n')], {type:'text/csv'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'nutritrack_'+fmtDate(new Date())+'.csv'; a.click(); URL.revokeObjectURL(a.href);
+  a.download = 'nutritracker_'+fmtDate(new Date())+'.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 
 async function resetAll() {
@@ -1079,30 +1079,103 @@ function drawChart(canvasId, datasets, labels, goalLine, minVal) {
   });
 }
 
+function drawBarChart(canvasId, datasets, labels, goalLine) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.parentElement.getBoundingClientRect().width;
+  const h = parseInt(canvas.getAttribute('height')) || 200;
+  canvas.width = w*dpr; canvas.height = h*dpr;
+  canvas.style.width = w+'px'; canvas.style.height = h+'px';
+  ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h);
+  const padL=44, padR=16, padT=16, padB=32;
+  const chartW=w-padL-padR, chartH=h-padT-padB;
+  const allVals = datasets.flatMap(d=>d.data);
+  if (goalLine) allVals.push(goalLine);
+  const maxVal = Math.max(...allVals, goalLine||1) * 1.15;
+  const isDark = document.documentElement.classList.contains('dark-mode') || (!document.documentElement.classList.contains('light-mode') && window.matchMedia('(prefers-color-scheme:dark)').matches);
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const textColor = '#9C9B96';
+  // Y axis labels and grid
+  ctx.font = '11px DM Sans,sans-serif'; ctx.textAlign='right'; ctx.fillStyle=textColor;
+  for (let i=0;i<=4;i++) {
+    const y=padT+chartH-(i/4)*chartH;
+    ctx.fillText(Math.round((i/4)*maxVal)+'%',padL-8,y+4);
+    ctx.beginPath(); ctx.strokeStyle=gridColor; ctx.lineWidth=1;
+    ctx.moveTo(padL,y); ctx.lineTo(w-padR,y); ctx.stroke();
+  }
+  // Goal line at 100%
+  if (goalLine) {
+    const gy=padT+chartH-(goalLine/maxVal)*chartH;
+    ctx.beginPath(); ctx.setLineDash([4,4]);
+    ctx.strokeStyle=isDark?'rgba(255,255,255,0.25)':'rgba(0,0,0,0.2)';
+    ctx.lineWidth=1.5;
+    ctx.moveTo(padL,gy); ctx.lineTo(w-padR,gy); ctx.stroke();
+    ctx.setLineDash([]); ctx.fillStyle=textColor; ctx.textAlign='left';
+    ctx.fillText('100%',w-padR+2,gy+4); ctx.textAlign='right';
+  }
+  // X axis labels
+  ctx.textAlign='center'; ctx.fillStyle=textColor;
+  const numDays = labels.length;
+  const numBars = datasets.length;
+  const groupWidth = chartW / numDays;
+  const barGap = 2;
+  const barWidth = Math.max(2, (groupWidth - (numBars+1)*barGap) / numBars);
+  const showEvery = numDays > 14 ? 3 : numDays > 8 ? 2 : 1;
+  labels.forEach((lbl, i) => {
+    const groupX = padL + i * groupWidth;
+    if (i % showEvery === 0 || i === numDays-1) ctx.fillText(lbl, groupX + groupWidth/2, h-8);
+  });
+  // Draw bars
+  datasets.forEach((ds, di) => {
+    ds.data.forEach((val, i) => {
+      if (val <= 0) return;
+      const groupX = padL + i * groupWidth;
+      const x = groupX + barGap + di * (barWidth + barGap);
+      const barH = (val / maxVal) * chartH;
+      const y = padT + chartH - barH;
+      ctx.fillStyle = ds.color;
+      ctx.beginPath();
+      const r = Math.min(2, barWidth/2);
+      ctx.roundRect(x, y, barWidth, barH, [r, r, 0, 0]);
+      ctx.fill();
+    });
+  });
+}
+
 function renderTrends() {
   const days = getDayTotals(trendRange), labels = days.map(d=>d.label);
   const cs = getComputedStyle(document.documentElement);
   const col = n => cs.getPropertyValue(n).trim();
-  drawChart('calChart',[{data:days.map(d=>d.cal),color:col('--blue')||'#2B6CB0'}],labels,goals.cal);
+  // Calculate net calories (consumed minus exercise)
+  const netCalData = days.map(d => {
+    const dayEx = exerciseLog.filter(e => e.date === d.date);
+    const exBurned = dayEx.reduce((a,e) => a + e.calories_burned, 0);
+    return d.cal > 0 ? d.cal - exBurned : 0;
+  });
+  drawChart('calChart',[
+    {data:days.map(d=>d.cal),color:col('--blue')||'#2B6CB0'},
+    {data:netCalData,color:'#22C55E'}
+  ],labels,goals.cal);
   drawChart('macroChart',[
     {data:days.map(d=>d.prot),color:col('--accent')||'#2E6B3E'},
     {data:days.map(d=>d.carbs),color:col('--amber')||'#B7791F'},
     {data:days.map(d=>d.fat),color:col('--coral')||'#C53D2F'},
     {data:days.map(d=>d.fiber),color:col('--purple')||'#A855F7'}
   ],labels,null);
-  // Macro percentage of target chart
+  // Macro percentage of target chart (grouped bars)
   const pctData = days.map(d => ({
     prot: goals.prot > 0 ? Math.round((d.prot/goals.prot)*100) : 0,
     carbs: goals.carbs > 0 ? Math.round((d.carbs/goals.carbs)*100) : 0,
     fat: goals.fat > 0 ? Math.round((d.fat/goals.fat)*100) : 0,
     fiber: goals.fiber > 0 ? Math.round((d.fiber/goals.fiber)*100) : 0
   }));
-  drawChart('macroPctChart',[
-    {data:pctData.map(d=>d.prot),color:col('--accent')||'#2E6B3E'},
-    {data:pctData.map(d=>d.carbs),color:col('--amber')||'#B7791F'},
-    {data:pctData.map(d=>d.fat),color:col('--coral')||'#C53D2F'},
-    {data:pctData.map(d=>d.fiber),color:col('--purple')||'#A855F7'}
-  ],labels,100);
+  drawBarChart('macroPctChart', [
+    {data:pctData.map(d=>d.prot),color:col('--accent')||'#2E6B3E',label:'P'},
+    {data:pctData.map(d=>d.carbs),color:col('--amber')||'#B7791F',label:'C'},
+    {data:pctData.map(d=>d.fat),color:col('--coral')||'#C53D2F',label:'F'},
+    {data:pctData.map(d=>d.fiber),color:col('--purple')||'#A855F7',label:'f'}
+  ], labels, 100);
   const dwd=days.filter(d=>d.cal>0), n=dwd.length||1;
   const sum=dwd.reduce((a,d)=>({cal:a.cal+d.cal,prot:a.prot+d.prot,carbs:a.carbs+d.carbs,fat:a.fat+d.fat,fiber:a.fiber+d.fiber}),{cal:0,prot:0,carbs:0,fat:0,fiber:0});
   document.getElementById('avgCal').textContent=Math.round(sum.cal/n);
@@ -1645,11 +1718,11 @@ function setTheme(mode) {
   document.documentElement.classList.remove('dark-mode','light-mode');
   if (mode === 'dark') document.documentElement.classList.add('dark-mode');
   else if (mode === 'light') document.documentElement.classList.add('light-mode');
-  try { localStorage.setItem('nutritrack_theme', mode); } catch(e) {}
+  try { localStorage.setItem('nutritracker_theme', mode); } catch(e) {}
   if (supaReady && currentUser) { supa('settings','PATCH',{query:'user_id=eq.'+currentUser.id,body:{theme:mode}}).catch(()=>{}); }
 }
 function loadTheme() {
-  const saved = localStorage.getItem('nutritrack_theme') || 'system';
+  const saved = localStorage.getItem('nutritracker_theme') || 'system';
   setTheme(saved);
 }
 function loadThemeFromSupabase(theme) {

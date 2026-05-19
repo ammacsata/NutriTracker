@@ -1,6 +1,6 @@
 {
-  "name": "Nutritrack",
-  "short_name": "Nutritrack",
+  "name": "nutritracker",
+  "short_name": "nutritracker",
   "description": "AI-powered nutrition tracker",
   "start_url": "/nutritracker/",
   "scope": "/nutritracker/",
